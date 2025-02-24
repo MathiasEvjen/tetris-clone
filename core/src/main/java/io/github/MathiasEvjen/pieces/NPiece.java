@@ -5,13 +5,6 @@ public class NPiece {
     private final int[][][] rotations = {
         {
             {0, 0, 0, 0, 0},
-            {0, 0, 0, 1, 0},
-            {0, 0, 2, 1, 0},
-            {0, 0, 1, 0, 0},
-            {0, 0, 0, 0, 0}
-        },
-        {
-            {0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0},
             {0, 1, 2, 0, 0},
             {0, 0, 1, 1, 0},
@@ -31,6 +24,13 @@ public class NPiece {
             {0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0}
         },
+        {
+            {0, 0, 0, 0, 0},
+            {0, 0, 0, 1, 0},
+            {0, 0, 2, 1, 0},
+            {0, 0, 1, 0, 0},
+            {0, 0, 0, 0, 0}
+        }
     };
 
     public NPiece() {
@@ -41,8 +41,7 @@ public class NPiece {
         return rotations[0];
     }
 
-    public int[][] rotate(int rotation) {
-
+    public int[][] getRotation(int rotation) {
         return rotations[rotation];
     }
 }

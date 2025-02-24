@@ -42,12 +42,8 @@ public class SquarePiece {
         return rotations[currentRotation];
     }
 
-    public int[][] getNextRotation() {
-        if (currentRotation == 3) {
-            currentRotation = 0;
-            return rotations[currentRotation];
-        }
-        return rotations[++currentRotation];
+    public int[][] getRotation(int rotation) {
+        return rotations[rotation];
     }
 
     public int getCurrentRotation() {

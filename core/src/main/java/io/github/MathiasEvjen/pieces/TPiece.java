@@ -6,6 +6,13 @@ public class TPiece {
         {
             {0, 0, 0, 0, 0},
             {0, 0, 1, 0, 0},
+            {0, 1, 2, 1, 0},
+            {0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0},
+        },
+        {
+            {0, 0, 0, 0, 0},
+            {0, 0, 1, 0, 0},
             {0, 0, 2, 1, 0},
             {0, 0, 1, 0, 0},
             {0, 0, 0, 0, 0},
@@ -23,14 +30,7 @@ public class TPiece {
             {0, 1, 2, 0, 0},
             {0, 0, 1, 0, 0},
             {0, 0, 0, 0, 0},
-        },
-        {
-            {0, 0, 0, 0, 0},
-            {0, 0, 1, 0, 0},
-            {0, 1, 2, 1, 0},
-            {0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0},
-        },
+        }
     };
 
     private int currentRotation = 0;
@@ -43,20 +43,8 @@ public class TPiece {
         return rotations[currentRotation];
     }
 
-    public int[][] getRightRotation() {
-        if (currentRotation == 3) {
-            currentRotation = 0;
-            return rotations[currentRotation];
-        }
-        return rotations[++currentRotation];
-    }
-
-    public int[][] getLeftRotation() {
-        if (currentRotation == 0) {
-            currentRotation = 3;
-            return rotations[currentRotation];
-        }
-        return rotations[--currentRotation];
+    public int[][] getRotation(int rotation) {
+        return rotations[rotation];
     }
 
     public int getCurrentRotation() {

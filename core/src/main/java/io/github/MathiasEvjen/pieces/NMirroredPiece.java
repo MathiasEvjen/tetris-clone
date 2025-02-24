@@ -5,13 +5,6 @@ public class NMirroredPiece {
     private final int[][][] rotations = {
         {
             {0, 0, 0, 0, 0},
-            {0, 0, 1, 0, 0},
-            {0, 0, 2, 1, 0},
-            {0, 0, 0, 1, 0},
-            {0, 0, 0, 0, 0},
-        },
-        {
-            {0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0},
             {0, 0, 2, 1, 0},
             {0, 1, 1, 0, 0},
@@ -31,6 +24,13 @@ public class NMirroredPiece {
             {0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0},
         },
+        {
+            {0, 0, 0, 0, 0},
+            {0, 0, 1, 0, 0},
+            {0, 0, 2, 1, 0},
+            {0, 0, 0, 1, 0},
+            {0, 0, 0, 0, 0},
+        }
     };
 
     private int currentRotation = 0;
@@ -43,12 +43,8 @@ public class NMirroredPiece {
         return rotations[currentRotation];
     }
 
-    public int[][] getNextRotation() {
-        if (currentRotation == 3) {
-            currentRotation = 0;
-            return rotations[currentRotation];
-        }
-        return rotations[++currentRotation];
+    public int[][] getRotation(int rotation) {
+        return rotations[rotation];
     }
 
     public int getCurrentRotation() {

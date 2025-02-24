@@ -1,3 +1,9 @@
+/*
+    TODO
+    Finne ut av hvorfor det crasher når man fyller et tomrom på en firkant
+    Legge inn riktig farge til de forskellige typene brikker
+*/
+
 package io.github.MathiasEvjen;
 
 import com.badlogic.gdx.Gdx;
@@ -9,6 +15,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
+import io.github.MathiasEvjen.pieces.*;
 
 import java.util.Arrays;
 
@@ -21,14 +28,19 @@ public class GameBoard implements Screen {
     private Texture testSqaure;
     private Sprite testSprite;
 
-    private Sprite[] testSprites;
-    private Array<Sprite> landedPieces;
+    private Sprite[] fallingPiece;
+    private Array<Sprite> landedTiles;
 
-    private Pieces pieces;
     private float moveTimer;
+    private float moveSpeed;
 
-    boolean pieceFalling;
-    int pieceRotation;
+    private boolean pieceIsFalling;
+    private int pieceRotation;
+    private boolean pieceLanded;
+
+    private int[] pivot;
+    private int currentPiece;
+
 
     public GameBoard(final Main game) {
         this.game = game;
@@ -39,11 +51,13 @@ public class GameBoard implements Screen {
         testSprite = new Sprite(testSqaure);
         testSprite.setSize(1, 1);
 
-        testSprites = new Sprite[4];
-        pieces = new Pieces();
+        fallingPiece = new Sprite[4];
 
+        moveSpeed = .125f;
 
-        landedPieces = new Array<>();
+        pivot = new int[2];
+
+        landedTiles = new Array<>();
 
         board = new String[20][10];
         for (String[] tile : board) {
@@ -58,6 +72,8 @@ public class GameBoard implements Screen {
 
     @Override
     public void render(float delta) {
+        float dt = Gdx.graphics.getDeltaTime();
+        moveTimer += dt;
         input();
         logic();
         draw();
@@ -75,108 +91,165 @@ public class GameBoard implements Screen {
         game.batch.draw(testBackground, 0, 0, worldWidth, worldHeight);
 
         // Creates a new piece at the top if there is no current piece falling
-        if (!pieceFalling) {
-            int squares = 0;
+        if (!pieceIsFalling) {
+            int randomPiece = MathUtils.random(0, 6);
+            currentPiece = randomPiece;
+            int[][] piece = Pieces.getPiece(randomPiece, pieceRotation);
+
+            int tiles = 0;
             pieceRotation = 0;
-            for (int j1 = 20, j2 = 0; j1 > 16; j1--, j2++) {
-                for (int i1 = 2, i2 = 0; i1 < 6; i1++, i2++) {
-                    if (pieces.getSquarePiece().getPiece()[j2][i2] != 0) {
-                        testSprites[squares] = new Sprite(testSqaure);
-                        testSprites[squares].setSize(1, 1);
-                        testSprites[squares].setX(i1);
-                        testSprites[squares].setY(j1);
-                        board[j1][i1] = "FILLED";
-//                        System.out.println(i1);
-//                        System.out.println(j1 + "\n");
-                        testSprites[squares].draw(game.batch);
-                        squares++;
+
+            for (int y1 = 20, y2 = 0; y1 > 16; y1--, y2++) {
+                for (int x1 = 3, x2 = 0; x1 < 8; x1++, x2++) {
+                    if (piece[y2][x2] != 0) {
+                        fallingPiece[tiles] = new Sprite(testSqaure);
+                        fallingPiece[tiles].setSize(1, 1);
+                        fallingPiece[tiles].setX(x1);
+                        fallingPiece[tiles].setY(y1);
+                        board[y1][x1] = "FALLING";
+                        fallingPiece[tiles].draw(game.batch);
+                        tiles++;
+                    }
+                    if (piece[y2][x2] == 2) {
+                        pivot[0] = x1;
+                        pivot[1] = y1;
                     }
                 }
             }
-//            System.out.println(Arrays.toString(testSprites));
-            pieceFalling = true;
+            pieceIsFalling = true;
+
         } else {
-            for (Sprite sprite : testSprites) {
+            for (Sprite sprite : fallingPiece) {
                 sprite.draw(game.batch);
             }
         }
 
-        for (Sprite piece : landedPieces) {
+        for (Sprite piece : landedTiles) {
             piece.draw(game.batch);
         }
 
         game.batch.end();
     }
+
+
     public void input() {
+        // Move piece to the bottom
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            // Find the lowest point in the piece
+            int lowestTileY = (int)fallingPiece[0].getY();
+            for (int i = 1; i < fallingPiece.length; i++)  {
+                if ((int)fallingPiece[i].getY() < lowestTileY) {
+                    lowestTileY = (int)fallingPiece[i].getY();
+                }
+            }
+
+            int distanceToBottom = 0;
+
+            for (int x = lowestTileY; x >= 0; x--) {
+                for (Sprite sprite : fallingPiece) {
+                    if (board[(int)sprite.getY()-distanceToBottom][(int) sprite.getX()].equals("FILLED")) {
+                        distanceToBottom--;
+                        pieceLanded = true;
+                        break;
+                    }
+                }
+                if (x == 0) {
+                    pieceLanded = true;
+                    break;
+                }
+                if (pieceLanded) break;
+
+                distanceToBottom++;
+            }
+
+            movePieceVertically(-distanceToBottom);
+            landPiece();
+        }
+
+        // Move piece down continually
+//        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+//            if (moveTimer > moveSpeed) {
+//                movePieceDown();
+//                moveTimer = 0;
+//            }
+//        }
+
+        // Move piece down incrementally
         if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-
-
-            boolean pieceAtBottom = false;
-            int lowestTile = (int)testSprites[0].getY();
-            for (int i = 1; i < testSprites.length; i++)  {
-                if ((int)testSprites[i].getY() < lowestTile) lowestTile = (int)testSprites[i].getY();
-            }
-
-            for (Sprite sprite : testSprites) {
-//                System.out.println(lowestTile);
-                if (lowestTile != 0 && board[lowestTile-1][(int)sprite.getX()].equals("FILLED")) {
-                    pieceAtBottom = true;
-                    break;
-                } else if (sprite.getY() == 0) {
-                    pieceAtBottom = true;
-                    break;
-                }
-            }
-            if (pieceAtBottom) {
-                for (int i = 0; i < testSprites.length; i++) {
-                    landedPieces.add(testSprites[i]);
-                    testSprites[i] = null;
-                    pieceFalling = false;
-                }
-            } else {
-                for (int i = testSprites.length - 1; i >= 0; i--) {
-                    board[(int)testSprites[i].getY()][(int)testSprites[i].getX()] = "EMPTY";
-                    testSprites[i].translateY(-1);
-                    board[(int)testSprites[i].getY()][(int)testSprites[i].getX()] = "FILLED";
-                }
-            }
+            movePieceDown();
         }
 
+        // Rotate piece
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            if (pieceRotation == 3) pieceRotation = 0;
-            else pieceRotation++;
-//            for (int j1 = )
+            if (pieceIsFalling) {
+                // Updates the currently falling piece's rotation
+                if (pieceRotation == 3) pieceRotation = 0;
+                else pieceRotation++;
+
+                int[][] piece = Pieces.getPiece(currentPiece, pieceRotation);
+
+                int tile = 0;    // Counts the number of
+                int[] newRotation = new int[8]; // Holds the coordinates from the next rotation
+                int newRotationCounter = 0;    // Counter for the index of newRotation
+
+
+
+                for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
+                    for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                        if (piece[y2][x2] != 0) {
+                            if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;    // Checks if the new position is taken or out of bounds
+
+                            // Saves the new coordinates to an array so that no pieces are moved preemptively
+                            newRotation[newRotationCounter++] = x1;
+                            newRotation[newRotationCounter++] = y1;
+                            tile++; // Increments the number of tiles counted
+                        }
+
+                        // Updates the pivot point
+                        if (piece[y2][x2] == 2) {
+                            pivot[0] = x1;
+                            pivot[1] = y1;
+                        }
+                    }
+                }
+
+                // Goes through the tiles of the falling piece and the newRotation coordinates and updates the tiles of the falling piece to the new coordinates
+                for (tile = 0, newRotationCounter = 0; tile < fallingPiece.length; tile++, newRotationCounter += 2) {
+                    board[(int)fallingPiece[tile].getY()][(int)fallingPiece[tile].getX()] = "EMPTY";    // Sets the old position on the board as empty
+
+                    // Sets the current tile to new coordinates
+                    fallingPiece[tile].setX(newRotation[newRotationCounter]);
+                    fallingPiece[tile].setY(newRotation[newRotationCounter + 1]);
+
+                    board[(int)fallingPiece[tile].getY()][(int)fallingPiece[tile].getX()] = "FALLING";  // Sets the new positions on the board as falling
+                }
+            }
         }
 
+        // Move piece left continaully
+//        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+//            if (moveTimer > moveSpeed) {
+//                movePieceLeft();
+//                moveTimer = 0;
+//            }
+//        }
+
+        // Move left incrementally
         if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            int furthestLeft = (int)testSprites[0].getX();
-            for (int i = 1; i < testSprites.length; i++) {
-                if ((int)testSprites[i].getX() < furthestLeft) furthestLeft = (int)testSprites[i].getX();
-            }
-            for (Sprite sprite : testSprites) {
-                if (sprite.getX() == 0 || board[(int)sprite.getY()][furthestLeft - 1].equals("FILLED")) return;
-            }
-            for (Sprite sprite : testSprites) {
-                board[(int)sprite.getY()][(int)sprite.getX()] = "EMPTY";
-                sprite.translateX(-1);
-                board[(int)sprite.getY()][(int)sprite.getX()] = "FILLED";
-            }
+            movePieceLeft();
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            int furthestRight = 0;
-            for (Sprite sprite : testSprites) {
-                if ((int)sprite.getX() > furthestRight) furthestRight = (int)sprite.getX();
-            }
-            for (Sprite sprite : testSprites) {
-                if (sprite.getX() == 9 || board[(int)sprite.getY()][furthestRight + 1].equals("FILLED")) return;
+        // Move piece right continually
+//        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+//            if (moveTimer > moveSpeed) {
+//                movePieceRight();
+//                moveTimer = 0;
+//            }
+//        }
 
-            }
-            for (Sprite sprite : testSprites) {
-                board[(int)sprite.getY()][(int)sprite.getX()] = "EMPTY";
-                sprite.translateX(1);
-                board[(int)sprite.getY()][(int)sprite.getX()] = "FILLED";
-            }
+        // Move piece right incrementally
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            movePieceRight();
         }
     }
 
@@ -187,58 +260,189 @@ public class GameBoard implements Screen {
         testSprite.setX(MathUtils.clamp(testSprite.getX(), 0, boardWidth - 1));
         testSprite.setY(MathUtils.clamp(testSprite.getY(), 0, boardHeight - 1));
 
-        float dt = Gdx.graphics.getDeltaTime();
-        moveTimer += dt;
 
-        if (pieceFalling) {
-            boolean pieceAtBottom = false;
-            int lowestTile = (int)testSprites[0].getY();
-            for (int i = 1; i < testSprites.length; i++)  {
-                if ((int)testSprites[i].getY() < lowestTile) lowestTile = (int)testSprites[i].getY();
+        // If there is a piece falling, a check on whether it cannot move further down is done
+        if (pieceIsFalling) {
+            pieceLanded = false;
+            int lowestTile = (int)fallingPiece[0].getY();
+            for (int i = 2; i < fallingPiece.length; i++)  {
+                if ((int)fallingPiece[i].getY() < lowestTile) {
+                    lowestTile = (int)fallingPiece[i].getY();
+                }
             }
 
-            for (Sprite sprite : testSprites) {
+            for (Sprite sprite : fallingPiece) {
 //                System.out.println(lowestTile);
-                if (lowestTile != 0 && board[lowestTile-1][(int)sprite.getX()].equals("FILLED")) {
-                    pieceAtBottom = true;
-                    break;
-                } else if (sprite.getY() == 0) {
-                    pieceAtBottom = true;
+                if ((sprite.getY() != 0 && board[(int)sprite.getY()-1][(int)sprite.getX()].equals("FILLED")) || sprite.getY() == 0) {
+                    pieceLanded = true;
                     break;
                 }
             }
-            if (pieceAtBottom) {
-                if ( moveTimer > 1f) {
-                    for (int i = 0; i < testSprites.length; i++) {
-                        landedPieces.add(testSprites[i]);
-                        testSprites[i] = null;
-                        pieceFalling = false;
-                    }
+
+            // If the piece cannot move down it will be stored in the landedTiles array
+            // The current falling piece array is reset to null
+            // Piece falling is set to false and a new piece will be created
+            if (pieceLanded) {
+                if (moveTimer > 1f) {
+                    landPiece();
                 }
+            }
+        }
+
+        // If there is a piece falling it will move downwards
+        if (pieceIsFalling) {
+            if (moveTimer > 1f) {
+                movePieceVertically(-1);
+                pivot[1]--;
+                moveTimer = 0;
             }
         }
 
         //Printing which tiles are filled or empty (upside down)
-//        for (String[] rad : board) {
-//            System.out.println(Arrays.toString(rad));
+//        for (int i = board.length - 1; i >= 0; i--) {
+//            System.out.println(Arrays.toString(board[i]));
 //        }
 //        System.out.println();
+//
+        removeCompletedRows();
+    }
 
+    public void movePieceVertically(int distance) {
+        for (int i = fallingPiece.length-1; i >= 0; i--) {   // Must be a reverse loop!!
+            board[(int)fallingPiece[i].getY()][(int)fallingPiece[i].getX()] = "EMPTY";
+            fallingPiece[i].translateY(distance);
+            board[(int)fallingPiece[i].getY()][(int)fallingPiece[i].getX()] = "FALLING";
+        }
+    }
 
-        // If there is a piece falling it will move downwards
-        if (pieceFalling) {
-            if (moveTimer > 1f) {
-                for (int i = testSprites.length - 1; i >= 0; i--) {
-                    board[(int)testSprites[i].getY()][(int)testSprites[i].getX()] = "EMPTY";
-//                    System.out.println(sprite.getY());
-                    testSprites[i].translateY(-1);
-                    board[(int)testSprites[i].getY()][(int)testSprites[i].getX()] = "FILLED";
-//                    System.out.println(sprite.getY());
-                    moveTimer = 0;
-                }
+    public void moveLandedTileVertically(int y) {
+        for (Sprite tile : landedTiles) {
+            if (tile.getY() == y) {
+                board[(int)tile.getY()][(int)tile.getX()] = "EMPTY";
+                tile.translateY(-1);
+                board[(int)tile.getY()][(int)tile.getX()] = "FILLED";
+            }
+        }
+    }
+
+    public void movePieceDown() {
+        pieceLanded = false;
+        int lowestTile = (int) fallingPiece[0].getY();
+        for (int i = 1; i < fallingPiece.length; i++) {
+            if ((int) fallingPiece[i].getY() < lowestTile) lowestTile = (int) fallingPiece[i].getY();
+        }
+
+        for (Sprite sprite : fallingPiece) {
+//                System.out.println(lowestTile);
+            if ((sprite.getY() != 0 && board[(int)sprite.getY()-1][(int)sprite.getX()].equals("FILLED")) || sprite.getY() == 0) {
+                pieceLanded = true;
+                break;
             }
         }
 
+        if (pieceLanded) {
+            pieceIsFalling = false;
+            landPiece();
+        } else {
+            movePieceVertically(-1);
+        }
+        pivot[1]--;
+    }
+
+    public void movePieceLeft() {
+        int furthestLeftX = (int) fallingPiece[0].getX();
+        int furthestLeftY = (int) fallingPiece[0].getY();
+        for (int i = 1; i < fallingPiece.length; i++) {
+            if ((int) fallingPiece[i].getX() < furthestLeftX) {
+                furthestLeftX = (int) fallingPiece[i].getX();
+                furthestLeftY = (int) fallingPiece[i].getY();
+            }
+        }
+
+        if (furthestLeftX == 0 || board[furthestLeftY][furthestLeftX - 1].equals("FILLED")) return;
+
+        movePieceLaterally(-1);
+        pivot[0]--;
+    }
+
+    public void movePieceRight() {
+        int furthestRightX = 0;
+        int furthestRighty = 0;
+        for (Sprite sprite : fallingPiece) {
+            if ((int) sprite.getX() > furthestRightX) {
+                furthestRightX = (int) sprite.getX();
+                furthestRighty = (int) sprite.getY();
+            }
+        }
+
+        if (furthestRightX == 9 || board[furthestRighty][furthestRightX + 1].equals("FILLED")) return;
+
+        movePieceLaterally(1);
+        pivot[0]++;
+    }
+
+    public void movePieceLaterally(int distance) {
+        for (Sprite sprite : fallingPiece) {
+            board[(int)sprite.getY()][(int)sprite.getX()] = "EMPTY";
+            sprite.translateX(distance);
+            board[(int)sprite.getY()][(int)sprite.getX()] = "FALLING";
+        }
+    }
+
+    public void landPiece() {
+        for (int i = 0; i < fallingPiece.length; i++) {
+            landedTiles.add(fallingPiece[i]);
+            board[(int)fallingPiece[i].getY()][(int)fallingPiece[i].getX()] = "FILLED";
+            fallingPiece[i] = null;
+            pieceIsFalling = false;
+            pieceLanded = false;
+            pieceRotation = 0;
+        }
+    }
+
+    // Deletes the line at the given y-position
+    public void removeRow(int y) {
+        // Loops through all x-positions in the line
+        for (int x = 0; x < 10; x++) {
+            // Loops through all the landed tiles on the board
+            for (Sprite tile : landedTiles) {
+                // When a landed tile on that position is found it is deleted
+                if (tile.getY() == y && tile.getX() == x) {
+                    landedTiles.removeIndex(landedTiles.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
+                }
+            }
+            // Sets the removed slot on the board to empty
+            board[y][x] = "EMPTY";
+        }
+    }
+
+    // Goes through the whole board and removes the lines that are full
+    public void removeCompletedRows() {
+        boolean removedRow = false;
+        int filledTiles = 0;    // Holds the number of tiles filled in the row
+        Array<Integer> filledRows = new Array<>();
+
+        // Goes through all the rows of the board and checks if they are full
+        for (int y1 = 0; y1 < board.length; y1++) {
+            // Checks all the tiles in the row if they are full
+            for (int x = 0; x < board[y1].length; x++) {
+                if (board[y1][x].equals("FILLED")) filledTiles++;    // Updates filledTiles counter if tile is filled
+            }
+
+            // If all the tiles are filled, the row is removed
+            if (filledTiles == board[y1].length) {
+                removeRow(y1);
+                y1--;    // Decrements y1 so the current line is checked again when all the tiles are moved one down
+                removedRow = true;
+            }
+
+            filledTiles = 0;    // Resets the number of filled tiles
+            if (removedRow) {
+                for (int y2 = y1 + 1; y2 < board.length; y2++) {
+                    moveLandedTileVertically(y2);
+                }
+            }
+        }
     }
 
     @Override
@@ -263,6 +467,7 @@ public class GameBoard implements Screen {
 
     @Override
     public void dispose() {
-
+        testSqaure.dispose();
+        testBackground.dispose();
     }
 }
