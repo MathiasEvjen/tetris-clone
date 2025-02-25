@@ -1,6 +1,6 @@
 /*
     TODO
-    Finne ut av hvorfor det crasher når man fyller et tomrom på en firkant
+    Finne ut hvorfor den lange brikken ikke kan flyttes når den er vannrett og innstil den venstre veggen
     Legge inn riktig farge til de forskellige typene brikker
 */
 
@@ -15,7 +15,6 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
-import io.github.MathiasEvjen.pieces.*;
 
 import java.util.Arrays;
 
@@ -24,9 +23,18 @@ public class GameBoard implements Screen {
 
     private final String[][] board;
 
-    private Texture testBackground;
-    private Texture testSqaure;
-    private Sprite testSprite;
+    private int startY;
+
+    private Texture background;
+    private Texture iTex;
+    private Texture zTex;
+    private Texture sTex;
+    private Texture lTex;
+    private Texture jTex;
+    private Texture squareTex;
+    private Texture tTex;
+
+    private Sprite[] tileTex;
 
     private Sprite[] fallingPiece;
     private Array<Sprite> landedTiles;
@@ -45,11 +53,24 @@ public class GameBoard implements Screen {
     public GameBoard(final Main game) {
         this.game = game;
 
-        testBackground = new Texture("testBackground.png");
-        testSqaure = new Texture("testSquare.png");
+        background = new Texture("background.png");
+        iTex = new Texture("ITile.png");
+        zTex = new Texture("ZTile.png");
+        sTex = new Texture("STile.png");
+        lTex = new Texture("LTile.png");
+        jTex = new Texture("JTile.png");
+        squareTex = new Texture("SquareTile.png");
+        tTex = new Texture("TTile.png");
 
-        testSprite = new Sprite(testSqaure);
-        testSprite.setSize(1, 1);
+        tileTex = new Sprite[7];
+        tileTex[0] = new Sprite(iTex);
+        tileTex[1] = new Sprite(zTex);
+        tileTex[2] = new Sprite(sTex);
+        tileTex[3] = new Sprite(lTex);
+        tileTex[4] = new Sprite(jTex);
+        tileTex[5] = new Sprite(squareTex);
+        tileTex[6] = new Sprite(tTex);
+
 
         fallingPiece = new Sprite[4];
 
@@ -88,7 +109,7 @@ public class GameBoard implements Screen {
         float worldWidth = game.viewport.getWorldWidth();
         float worldHeight = game.viewport.getWorldHeight();
 
-        game.batch.draw(testBackground, 0, 0, worldWidth, worldHeight);
+        game.batch.draw(background, 0, 0, worldWidth, worldHeight);
 
         // Creates a new piece at the top if there is no current piece falling
         if (!pieceIsFalling) {
@@ -96,13 +117,27 @@ public class GameBoard implements Screen {
             currentPiece = randomPiece;
             int[][] piece = Pieces.getPiece(randomPiece, pieceRotation);
 
+            switch (randomPiece) {
+                case 0:
+                case 1:
+                case 2:
+                case 5:
+                    startY = 21;
+                    break;
+                default:
+                    startY = 20;
+                    break;
+            }
+
             int tiles = 0;
             pieceRotation = 0;
 
-            for (int y1 = 20, y2 = 0; y1 > 16; y1--, y2++) {
+            moveTimer = .5f;
+
+            for (int y1 = startY, y2 = 0; y1 > 16; y1--, y2++) {
                 for (int x1 = 3, x2 = 0; x1 < 8; x1++, x2++) {
                     if (piece[y2][x2] != 0) {
-                        fallingPiece[tiles] = new Sprite(testSqaure);
+                        fallingPiece[tiles] = new Sprite(tileTex[randomPiece]);
                         fallingPiece[tiles].setSize(1, 1);
                         fallingPiece[tiles].setX(x1);
                         fallingPiece[tiles].setY(y1);
@@ -122,6 +157,16 @@ public class GameBoard implements Screen {
             for (Sprite sprite : fallingPiece) {
                 sprite.draw(game.batch);
             }
+//            System.out.println();
+//            String coords = "";
+//            for (Sprite tile : fallingPiece) {
+//                coords += "[";
+//                coords += tile.getX();
+//                coords += ", ";
+//                coords += tile.getY();
+//                coords += "], ";
+//            }
+//            System.out.println(coords + "\n");
         }
 
         for (Sprite piece : landedTiles) {
@@ -145,7 +190,7 @@ public class GameBoard implements Screen {
 
             int distanceToBottom = 0;
 
-            for (int x = lowestTileY; x >= 0; x--) {
+            for (int y = lowestTileY; y >= 0; y--) {
                 for (Sprite sprite : fallingPiece) {
                     if (board[(int)sprite.getY()-distanceToBottom][(int) sprite.getX()].equals("FILLED")) {
                         distanceToBottom--;
@@ -153,7 +198,7 @@ public class GameBoard implements Screen {
                         break;
                     }
                 }
-                if (x == 0) {
+                if (y == 0) {
                     pieceLanded = true;
                     break;
                 }
@@ -197,7 +242,11 @@ public class GameBoard implements Screen {
                 for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
                     for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
                         if (piece[y2][x2] != 0) {
-                            if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;    // Checks if the new position is taken or out of bounds
+                            if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) {
+                                if (pieceRotation == 0) pieceRotation = 3;
+                                else pieceRotation--;
+                                return;    // Checks if the new position is taken or out of bounds
+                            }
 
                             // Saves the new coordinates to an array so that no pieces are moved preemptively
                             newRotation[newRotationCounter++] = x1;
@@ -254,25 +303,13 @@ public class GameBoard implements Screen {
     }
 
     public void logic() {
-        float boardWidth = game.viewport.getWorldWidth();
-        float boardHeight = game.viewport.getWorldHeight();
-
-        testSprite.setX(MathUtils.clamp(testSprite.getX(), 0, boardWidth - 1));
-        testSprite.setY(MathUtils.clamp(testSprite.getY(), 0, boardHeight - 1));
-
-
         // If there is a piece falling, a check on whether it cannot move further down is done
         if (pieceIsFalling) {
             pieceLanded = false;
-            int lowestTile = (int)fallingPiece[0].getY();
-            for (int i = 2; i < fallingPiece.length; i++)  {
-                if ((int)fallingPiece[i].getY() < lowestTile) {
-                    lowestTile = (int)fallingPiece[i].getY();
-                }
-            }
 
+            // Checks the tiles to see if the tile directly under it is either filled or the bottom of the board
+            // Sets the piece as landed if either criteria is met
             for (Sprite sprite : fallingPiece) {
-//                System.out.println(lowestTile);
                 if ((sprite.getY() != 0 && board[(int)sprite.getY()-1][(int)sprite.getX()].equals("FILLED")) || sprite.getY() == 0) {
                     pieceLanded = true;
                     break;
@@ -280,16 +317,15 @@ public class GameBoard implements Screen {
             }
 
             // If the piece cannot move down it will be stored in the landedTiles array
-            // The current falling piece array is reset to null
-            // Piece falling is set to false and a new piece will be created
             if (pieceLanded) {
                 if (moveTimer > 1f) {
-                    landPiece();
+                    landPiece();    // Lands the current tile
                 }
             }
+
         }
 
-        // If there is a piece falling it will move downwards
+        // If there is a piece falling it will move downwards every second
         if (pieceIsFalling) {
             if (moveTimer > 1f) {
                 movePieceVertically(-1);
@@ -298,13 +334,19 @@ public class GameBoard implements Screen {
             }
         }
 
-        //Printing which tiles are filled or empty (upside down)
+        removeCompletedRows();  // Checks for filled rows and removes them
+
+        for (Sprite tile : landedTiles) {
+            if (tile.getY() == 19) {
+                game.setScreen(new GameOverScreen(game, landedTiles));
+            }
+        }
+
+        // Printing which tiles are filled or empty (upside down)
 //        for (int i = board.length - 1; i >= 0; i--) {
 //            System.out.println(Arrays.toString(board[i]));
 //        }
-//        System.out.println();
-//
-        removeCompletedRows();
+
     }
 
     public void movePieceVertically(int distance) {
@@ -350,37 +392,26 @@ public class GameBoard implements Screen {
     }
 
     public void movePieceLeft() {
-        int furthestLeftX = (int) fallingPiece[0].getX();
-        int furthestLeftY = (int) fallingPiece[0].getY();
-        for (int i = 1; i < fallingPiece.length; i++) {
-            if ((int) fallingPiece[i].getX() < furthestLeftX) {
-                furthestLeftX = (int) fallingPiece[i].getX();
-                furthestLeftY = (int) fallingPiece[i].getY();
-            }
+        for (Sprite tile : fallingPiece) {
+            if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX() - 1].equals("FILLED")) return;
         }
-
-        if (furthestLeftX == 0 || board[furthestLeftY][furthestLeftX - 1].equals("FILLED")) return;
 
         movePieceLaterally(-1);
         pivot[0]--;
     }
 
     public void movePieceRight() {
-        int furthestRightX = 0;
-        int furthestRighty = 0;
-        for (Sprite sprite : fallingPiece) {
-            if ((int) sprite.getX() > furthestRightX) {
-                furthestRightX = (int) sprite.getX();
-                furthestRighty = (int) sprite.getY();
-            }
+        for (Sprite tile : fallingPiece) {
+            // Checks if the tiles furthest right are at the right edge
+            if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX() + 1].equals("FILLED")) return;
         }
-
-        if (furthestRightX == 9 || board[furthestRighty][furthestRightX + 1].equals("FILLED")) return;
 
         movePieceLaterally(1);
         pivot[0]++;
     }
 
+    // Moves the falling piece laterally
+    // Takes in the distance to be moved
     public void movePieceLaterally(int distance) {
         for (Sprite sprite : fallingPiece) {
             board[(int)sprite.getY()][(int)sprite.getX()] = "EMPTY";
@@ -389,13 +420,15 @@ public class GameBoard implements Screen {
         }
     }
 
+    // Lands the current piece
     public void landPiece() {
+        // Iterates through all the tiles of the landing piece
         for (int i = 0; i < fallingPiece.length; i++) {
-            landedTiles.add(fallingPiece[i]);
-            board[(int)fallingPiece[i].getY()][(int)fallingPiece[i].getX()] = "FILLED";
-            fallingPiece[i] = null;
-            pieceIsFalling = false;
-            pieceLanded = false;
+            landedTiles.add(fallingPiece[i]);   // Adds the tile to the array holding the landed tiles
+            board[(int)fallingPiece[i].getY()][(int)fallingPiece[i].getX()] = "FILLED"; // Sets the coordinates of the landed tiles as filled
+            fallingPiece[i] = null; // The current falling piece array is reset to null
+            pieceIsFalling = false; // Piece falling is set to false and a new piece will be created
+            pieceLanded = false;    // Sets falling piece as not landed so the new piece can fall
             pieceRotation = 0;
         }
     }
@@ -442,6 +475,8 @@ public class GameBoard implements Screen {
                     moveLandedTileVertically(y2);
                 }
             }
+
+            removedRow = false;
         }
     }
 
@@ -467,7 +502,13 @@ public class GameBoard implements Screen {
 
     @Override
     public void dispose() {
-        testSqaure.dispose();
-        testBackground.dispose();
+        iTex.dispose();
+        zTex.dispose();
+        sTex.dispose();
+        lTex.dispose();
+        jTex.dispose();
+        squareTex.dispose();
+        tTex.dispose();
+        background.dispose();
     }
 }

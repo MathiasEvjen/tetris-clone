@@ -1,6 +1,6 @@
 package io.github.MathiasEvjen.pieces;
 
-public class NPiece {
+public class ZPiece {
 
     private final int[][][] rotations = {
         {
@@ -33,7 +33,7 @@ public class NPiece {
         }
     };
 
-    public NPiece() {
+    public ZPiece() {
 
     }
 

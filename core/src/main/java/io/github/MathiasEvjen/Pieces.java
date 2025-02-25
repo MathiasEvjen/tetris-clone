@@ -10,17 +10,17 @@ public class Pieces {
                 if (rotation == 0) return new IPiece().getPiece();
                 return new IPiece().getRotation(rotation);
             case 1:
-                if (rotation == 0) return new NPiece().getPiece();
-                return new NPiece().getRotation(rotation);
+                if (rotation == 0) return new ZPiece().getPiece();
+                return new ZPiece().getRotation(rotation);
             case 2:
-                if (rotation == 0) return new NMirroredPiece().getPiece();
-                return new NMirroredPiece().getRotation(rotation);
+                if (rotation == 0) return new SPiece().getPiece();
+                return new SPiece().getRotation(rotation);
             case 3:
                 if (rotation == 0) return new LPiece().getPiece();
                 return new LPiece().getRotation(rotation);
             case 4:
-                if (rotation == 0) return new LMirroredPiece().getPiece();
-                return new LMirroredPiece().getRotation(rotation);
+                if (rotation == 0) return new JPiece().getPiece();
+                return new JPiece().getRotation(rotation);
             case 5:
                 if (rotation == 0) return new SquarePiece().getPiece();
                 return new SquarePiece().getRotation(rotation);
@@ -44,16 +44,16 @@ public class Pieces {
         return new LPiece();
     }
 
-    public LMirroredPiece getLMirroredPiece() {
-        return new LMirroredPiece();
+    public JPiece getLMirroredPiece() {
+        return new JPiece();
     }
 
-    public NPiece getNPiece() {
-        return new NPiece();
+    public ZPiece getNPiece() {
+        return new ZPiece();
     }
 
-    public NMirroredPiece getNMirroredPiece() {
-        return new NMirroredPiece();
+    public SPiece getNMirroredPiece() {
+        return new SPiece();
     }
 
     public TPiece getTPiece() {

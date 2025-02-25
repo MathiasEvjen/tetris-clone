@@ -1,6 +1,6 @@
 package io.github.MathiasEvjen.pieces;
 
-public class LMirroredPiece {
+public class JPiece {
 
     private final int[][][] rotations = {
         {
@@ -35,7 +35,7 @@ public class LMirroredPiece {
 
     private int currentRotation = 0;
 
-    public LMirroredPiece() {
+    public JPiece() {
 
     }
 
