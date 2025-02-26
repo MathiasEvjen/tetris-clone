@@ -1,7 +1,11 @@
 /*
     TODO
-    Finne ut hvorfor den lange brikken ikke kan flyttes når den er vannrett og innstil den venstre veggen
-    Legge inn riktig farge til de forskellige typene brikker
+    Fikse rotasjon ved vegg
+    Legge til mulighet for å holde brikker
+    Legge til mulighet til å se neste brikke som kommer
+    Legge til poengsystem
+        Legge til flere poeng for flere linjer fjernet av gangen
+    Legge til speedup ved et visst antall poeng
 */
 
 package io.github.MathiasEvjen;
@@ -24,15 +28,17 @@ public class GameBoard implements Screen {
     private final String[][] board;
 
     private int startY;
+    private int startX;
+    private int stopX;
 
-    private Texture background;
-    private Texture iTex;
-    private Texture zTex;
-    private Texture sTex;
-    private Texture lTex;
-    private Texture jTex;
-    private Texture squareTex;
-    private Texture tTex;
+    private final Texture background;
+    private final Texture iTex;
+    private final Texture zTex;
+    private final Texture sTex;
+    private final Texture lTex;
+    private final Texture jTex;
+    private final Texture squareTex;
+    private final Texture tTex;
 
     private Sprite[] tileTex;
 
@@ -40,6 +46,8 @@ public class GameBoard implements Screen {
     private Array<Sprite> landedTiles;
 
     private float moveTimer;
+    private float moveDownTimer;
+    private float moveDownTimeout;
     private float moveSpeed;
 
     private boolean pieceIsFalling;
@@ -75,6 +83,7 @@ public class GameBoard implements Screen {
         fallingPiece = new Sprite[4];
 
         moveSpeed = .125f;
+        moveDownTimeout = .5f;
 
         pivot = new int[2];
 
@@ -95,13 +104,14 @@ public class GameBoard implements Screen {
     public void render(float delta) {
         float dt = Gdx.graphics.getDeltaTime();
         moveTimer += dt;
+        moveDownTimer += dt;
         input();
         logic();
         draw();
     }
 
     public void draw() {
-        ScreenUtils.clear(Color.BLUE);
+        ScreenUtils.clear(Color.BLACK);
         game.viewport.apply();
         game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
         game.batch.begin();
@@ -114,17 +124,25 @@ public class GameBoard implements Screen {
         // Creates a new piece at the top if there is no current piece falling
         if (!pieceIsFalling) {
             int randomPiece = MathUtils.random(0, 6);
+            System.out.println("Piece no.: " + randomPiece);
             currentPiece = randomPiece;
             int[][] piece = Pieces.getPiece(randomPiece, pieceRotation);
 
             switch (randomPiece) {
                 case 0:
+                    startX = 2;
+                    stopX = 7;
+                    startY = 19;
+                    break;
                 case 1:
                 case 2:
-                case 5:
+                    startX = 3;
+                    stopX = 8;
                     startY = 21;
                     break;
                 default:
+                    startX = 2;
+                    stopX = 7;
                     startY = 20;
                     break;
             }
@@ -132,20 +150,21 @@ public class GameBoard implements Screen {
             int tiles = 0;
             pieceRotation = 0;
 
-            moveTimer = .5f;
+            moveDownTimer = 0;
 
             for (int y1 = startY, y2 = 0; y1 > 16; y1--, y2++) {
-                for (int x1 = 3, x2 = 0; x1 < 8; x1++, x2++) {
-                    if (piece[y2][x2] != 0) {
+                for (int x1 = startX, x2 = 0; x1 < stopX; x1++, x2++) {
+                    if (piece[y2][x2] != 0 && piece[y2][x2] != 3) {
                         fallingPiece[tiles] = new Sprite(tileTex[randomPiece]);
                         fallingPiece[tiles].setSize(1, 1);
                         fallingPiece[tiles].setX(x1);
                         fallingPiece[tiles].setY(y1);
+                        System.out.println("[" + x1 + ", " + y1 + "]");
                         board[y1][x1] = "FALLING";
                         fallingPiece[tiles].draw(game.batch);
                         tiles++;
                     }
-                    if (piece[y2][x2] == 2) {
+                    if (piece[y2][x2] == 2 || piece[y2][x2] == 3) {
                         pivot[0] = x1;
                         pivot[1] = y1;
                     }
@@ -212,21 +231,18 @@ public class GameBoard implements Screen {
         }
 
         // Move piece down continually
-//        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-//            if (moveTimer > moveSpeed) {
-//                movePieceDown();
-//                moveTimer = 0;
-//            }
-//        }
-
-        // Move piece down incrementally
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            movePieceDown();
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            if (moveTimer > moveSpeed) {
+                movePieceDown();
+                moveTimer = 0;
+            }
         }
 
         // Rotate piece
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
             if (pieceIsFalling) {
+                if (pieceLanded) moveDownTimer = 0;
+
                 // Updates the currently falling piece's rotation
                 if (pieceRotation == 3) pieceRotation = 0;
                 else pieceRotation++;
@@ -241,7 +257,7 @@ public class GameBoard implements Screen {
 
                 for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
                     for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
-                        if (piece[y2][x2] != 0) {
+                        if (piece[y2][x2] != 0 && piece[y2][x2] != 3) {
                             if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) {
                                 if (pieceRotation == 0) pieceRotation = 3;
                                 else pieceRotation--;
@@ -253,18 +269,19 @@ public class GameBoard implements Screen {
                             newRotation[newRotationCounter++] = y1;
                             tile++; // Increments the number of tiles counted
                         }
-
-                        // Updates the pivot point
-                        if (piece[y2][x2] == 2) {
-                            pivot[0] = x1;
-                            pivot[1] = y1;
-                        }
                     }
                 }
 
                 // Goes through the tiles of the falling piece and the newRotation coordinates and updates the tiles of the falling piece to the new coordinates
                 for (tile = 0, newRotationCounter = 0; tile < fallingPiece.length; tile++, newRotationCounter += 2) {
-                    board[(int)fallingPiece[tile].getY()][(int)fallingPiece[tile].getX()] = "EMPTY";    // Sets the old position on the board as empty
+                    for (Sprite fallingTile : fallingPiece) {
+                        if (fallingTile.getX() == newRotation[newRotationCounter] && fallingTile.getY() == newRotation[newRotationCounter + 1]) {
+                            board[(int)fallingPiece[tile].getY()][(int)fallingPiece[tile].getX()] = "FALLING";
+                        } else {
+                            board[(int)fallingPiece[tile].getY()][(int)fallingPiece[tile].getX()] = "EMPTY";    // Sets the old position on the board as empty
+                        }
+                    }
+
 
                     // Sets the current tile to new coordinates
                     fallingPiece[tile].setX(newRotation[newRotationCounter]);
@@ -276,29 +293,19 @@ public class GameBoard implements Screen {
         }
 
         // Move piece left continaully
-//        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-//            if (moveTimer > moveSpeed) {
-//                movePieceLeft();
-//                moveTimer = 0;
-//            }
-//        }
-
-        // Move left incrementally
-        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            movePieceLeft();
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            if (moveTimer > moveSpeed) {
+                movePieceLeft();
+                moveTimer = 0;
+            }
         }
 
         // Move piece right continually
-//        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-//            if (moveTimer > moveSpeed) {
-//                movePieceRight();
-//                moveTimer = 0;
-//            }
-//        }
-
-        // Move piece right incrementally
-        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            movePieceRight();
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            if (moveTimer > moveSpeed) {
+                movePieceRight();
+                moveTimer = 0;
+            }
         }
     }
 
@@ -318,7 +325,7 @@ public class GameBoard implements Screen {
 
             // If the piece cannot move down it will be stored in the landedTiles array
             if (pieceLanded) {
-                if (moveTimer > 1f) {
+                if (moveDownTimer > moveDownTimeout) {
                     landPiece();    // Lands the current tile
                 }
             }
@@ -327,10 +334,10 @@ public class GameBoard implements Screen {
 
         // If there is a piece falling it will move downwards every second
         if (pieceIsFalling) {
-            if (moveTimer > 1f) {
+            if (moveDownTimer > moveDownTimeout) {
                 movePieceVertically(-1);
                 pivot[1]--;
-                moveTimer = 0;
+                moveDownTimer = 0;
             }
         }
 
@@ -346,6 +353,7 @@ public class GameBoard implements Screen {
 //        for (int i = board.length - 1; i >= 0; i--) {
 //            System.out.println(Arrays.toString(board[i]));
 //        }
+//        System.out.println();
 
     }
 
@@ -393,7 +401,7 @@ public class GameBoard implements Screen {
 
     public void movePieceLeft() {
         for (Sprite tile : fallingPiece) {
-            if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX() - 1].equals("FILLED")) return;
+            if (tile == null || tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX() - 1].equals("FILLED")) return;
         }
 
         movePieceLaterally(-1);
@@ -403,7 +411,7 @@ public class GameBoard implements Screen {
     public void movePieceRight() {
         for (Sprite tile : fallingPiece) {
             // Checks if the tiles furthest right are at the right edge
-            if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX() + 1].equals("FILLED")) return;
+            if (tile == null || tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX() + 1].equals("FILLED")) return;
         }
 
         movePieceLaterally(1);
