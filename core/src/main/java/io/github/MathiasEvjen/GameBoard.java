@@ -47,7 +47,7 @@ public class GameBoard implements Screen {
 
     private float moveTimer;
     private float moveDownTimer;
-    private float moveDownTimeout;
+    private float moveDownSpeed;
     private float moveSpeed;
 
     private boolean pieceIsFalling;
@@ -83,7 +83,7 @@ public class GameBoard implements Screen {
         fallingPiece = new Sprite[4];
 
         moveSpeed = .125f;
-        moveDownTimeout = .5f;
+        moveDownSpeed = .5f;   // Defines the dropspeed of the pieces
 
         pivot = new int[2];
 
@@ -123,7 +123,7 @@ public class GameBoard implements Screen {
 
         // Creates a new piece at the top if there is no current piece falling
         if (!pieceIsFalling) {
-            int randomPiece = MathUtils.random(0, 6);
+            int randomPiece =  MathUtils.random(0, 6);
 //            System.out.println("Piece no.: " + randomPiece);
             currentPiece = randomPiece;
             int[][] piece = Pieces.getPiece(randomPiece, pieceRotation);
@@ -243,17 +243,32 @@ public class GameBoard implements Screen {
             if (pieceIsFalling) {
                 if (pieceLanded) moveDownTimer = 0;
 
+
                 boolean iPieceAtWallLeft = false;
                 boolean iPieceAtWallRight = false;
 
+                boolean zPieceAtWallLeft = false;
+                boolean zPieceAtWallRight = false;
+                boolean zPieceAtCeiling = false;
+                boolean zPieceAtFloor = false;
+
+                boolean sPieceAtWallLeft = false;
+                boolean sPieceAtWallRight = false;
+                boolean sPieceAtCeiling = false;
+                boolean sPieceAtFloor = false;
+
                 boolean lPieceAtWallLeft = false;
                 boolean lPieceAtWallRight = false;
+                boolean lPieceAtFloor = false;
 
                 boolean jPieceAtWallLeft = false;
                 boolean jPieceAtWallRight = false;
+                boolean jPieceAtFloor = false;
 
                 boolean tPieceAtWallLeft = false;
                 boolean tPieceAtWallRight = false;
+                boolean tPieceAtFloor = false;
+
 
                 // Checks if an I-Piece is at a left or right wall
                 if (currentPiece == 0) {
@@ -263,44 +278,92 @@ public class GameBoard implements Screen {
                         if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX()-1].equals("FILLED")) iPieceAtWallLeftCounter++;
                         if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX()+1].equals("FILLED")) iPieceAtWallRightCounter++;
                     }
-                    if (iPieceAtWallLeftCounter == 4) iPieceAtWallLeft = true;
-                    if (iPieceAtWallRightCounter == 4) iPieceAtWallRight = true;
+                    if (iPieceAtWallLeftCounter >= 2) iPieceAtWallLeft = true;
+                    if (iPieceAtWallRightCounter >= 2) iPieceAtWallRight = true;
                 }
 
-                // Checks if an L-Piece is at the wall
+                // Checks if a Z-Piece is at a wall, ceiling or floor
+                if (currentPiece == 1) {
+                    int zPieceAtWallLeftCounter = 0;
+                    int zPieceAtWallRightCounter = 0;
+                    int zPieceAtCeilingCounter = 0;
+                    int zPieceAtFloorCounter = 0;
+                    for (Sprite tile : fallingPiece) {
+                        if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX()-1].equals("FILLED")) zPieceAtWallLeftCounter++;
+                        if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX()+1].equals("FILLED")) zPieceAtWallRightCounter++;
+                        if (tile.getY() == 19 || board[(int)tile.getY()+1][(int)tile.getX()].equals("FILLED")) zPieceAtCeilingCounter++;
+                        if (tile.getY() == 0 || board[(int)tile.getY()-1][(int)tile.getX()].equals("FILLED")) zPieceAtFloorCounter++;
+                    }
+                    if (zPieceAtWallLeftCounter >= 1) zPieceAtWallLeft = true;
+                    if (zPieceAtWallRightCounter >= 1) zPieceAtWallRight = true;
+                    if (zPieceAtCeilingCounter == 2) zPieceAtCeiling = true;
+                    if (zPieceAtFloorCounter == 2) zPieceAtFloor = true;
+                }
+
+                // Checks if an S-Piece is at a wall, ceiling or floor
+                if (currentPiece == 2) {
+                    int sPieceAtWallLeftCounter = 0;
+                    int sPieceAtWallRightCounter = 0;
+                    int sPieceAtCeilingCounter = 0;
+                    int sPieceAtFloorCounter = 0;
+                    for (Sprite tile : fallingPiece) {
+                        if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX()-1].equals("FILLED")) sPieceAtWallLeftCounter++;
+                        if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX()+1].equals("FILLED")) sPieceAtWallRightCounter++;
+                        if (tile.getY() == 19 || board[(int)tile.getY()+1][(int)tile.getX()].equals("FILLED")) sPieceAtCeilingCounter++;
+                        if (tile.getY() == 0 || board[(int)tile.getY()-1][(int)tile.getX()].equals("FILLED")) sPieceAtFloorCounter++;
+                    }
+                    if (sPieceAtWallLeftCounter >= 1) sPieceAtWallLeft = true;
+                    if (sPieceAtWallRightCounter >= 1) sPieceAtWallRight = true;
+                    if (sPieceAtCeilingCounter == 2) sPieceAtCeiling = true;
+                    if (sPieceAtFloorCounter == 2) sPieceAtFloor = true;
+                }
+
+                // Checks if an L-Piece is at a wall
                 if (currentPiece == 3) {
                     int lPieceAtWallLeftCounter = 0;
                     int lPieceAtWallRightCounter = 0;
+                    int lPieceAtFloorCounter = 0;
                     for (Sprite tile : fallingPiece) {
                         if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX()-1].equals("FILLED")) lPieceAtWallLeftCounter++;
                         if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX()+1].equals("FILLED")) lPieceAtWallRightCounter++;
+                        if (tile.getY() == 0 || board[(int)tile.getY()-1][(int)tile.getX()].equals("FILLED")) lPieceAtFloorCounter++;
                     }
-                    if (lPieceAtWallLeftCounter == 3) lPieceAtWallLeft = true;
-                    if (lPieceAtWallRightCounter == 3) lPieceAtWallRight = true;
+                    if (lPieceAtWallLeftCounter >= 2) lPieceAtWallLeft = true;
+                    if (lPieceAtWallRightCounter >= 2) lPieceAtWallRight = true;
+                    if (lPieceAtFloorCounter >= 2) lPieceAtFloor = true;
                 }
 
-                // Checks if a J-Piece is at the wall
+                // Checks if a J-Piece is at a wall
                 if (currentPiece == 4) {
                     int jPieceAtWallLeftCounter = 0;
                     int jPieceAtWallRightCounter = 0;
+                    int jPieceAtFloorCounter = 0;
                     for (Sprite tile : fallingPiece) {
                         if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX()-1].equals("FILLED")) jPieceAtWallLeftCounter++;
                         if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX()+1].equals("FILLED")) jPieceAtWallRightCounter++;
+                        if (tile.getY() == 0 || board[(int)tile.getY()-1][(int)tile.getX()].equals("FILLED")) jPieceAtFloorCounter++;
                     }
-                    if (jPieceAtWallLeftCounter == 3) jPieceAtWallLeft = true;
-                    if (jPieceAtWallRightCounter == 3) jPieceAtWallRight = true;
+                    if (jPieceAtWallLeftCounter >= 2) jPieceAtWallLeft = true;
+                    if (jPieceAtWallRightCounter >= 2) jPieceAtWallRight = true;
+                    if (jPieceAtFloorCounter >= 2) jPieceAtFloor = true;
                 }
 
+                // Checks if a T-Piece is at a wall
                 if (currentPiece == 6) {
                     int tPieceAtWallLeftCounter = 0;
                     int tPieceAtWallRightCounter = 0;
+                    int tPieceAtFloorCounter = 0;
                     for (Sprite tile : fallingPiece) {
                         if (tile.getX() == 0 || board[(int)tile.getY()][(int)tile.getX()-1].equals("FILLED")) tPieceAtWallLeftCounter++;
                         if (tile.getX() == 9 || board[(int)tile.getY()][(int)tile.getX()+1].equals("FILLED")) tPieceAtWallRightCounter++;
+                        if (tile.getY() == 0 || board[(int)tile.getY()-1][(int)tile.getX()].equals("FILLED")) tPieceAtFloorCounter++;
                     }
-                    if (tPieceAtWallLeftCounter == 3) tPieceAtWallLeft = true;
-                    if (tPieceAtWallRightCounter == 3) tPieceAtWallRight = true;
+                    if (tPieceAtWallLeftCounter >= 2) tPieceAtWallLeft = true;
+                    if (tPieceAtWallRightCounter >= 2) tPieceAtWallRight = true;
+                    if (tPieceAtFloorCounter >= 2) tPieceAtFloor = true;
                 }
+
+
 
                 // If I-Piece is at a left wall and there is free space, the pivot coords are moved out from the wall so it can rotate
                 if (iPieceAtWallLeft) {
@@ -356,6 +419,126 @@ public class GameBoard implements Screen {
                     }
                 }
 
+                // If Z-Piece is at the wall and there is free space, the pivot coords are moved out from the wall so it can rotate
+                if (zPieceAtWallLeft) {
+                    // If Z-Piece is at rotation 1 and there is free space, the pivot coords are moved one tile to the right
+                    if (currentPiece == 1 && pieceRotation == 3) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 0);
+                        for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
+                            for (int x1 = pivot[0] - 1, x2 = 0; x1 < pivot[0] + 4; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3)
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                            }
+                        }
+                        pivot[0]++;
+                    }
+                }
+
+                // If Z-Piece is at the wall and there is free space, the pivot coords are moved out from the wall so it can rotate
+                if (zPieceAtWallRight) {
+                    // If Z-Piece is at rotation 1 and there is free space, the pivot coords are moved one tile to the left
+                    if (currentPiece == 1 && pieceRotation == 1) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 2);
+                        for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
+                            for (int x1 = pivot[0] - 3, x2 = 0; x1 < pivot[0] + 2; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3)
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                            }
+                        }
+                        pivot[0]--;
+                    }
+                }
+
+                // If Z-Piece is at the ceiling and there is free space, the pivot coords are moved down from the ceiling so it can rotate
+                if (zPieceAtCeiling) {
+                    if (currentPiece == 1 && pieceRotation == 0) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 1);
+                        for (int y1 = pivot[1] + 1, y2 = 0; y1 > pivot[1] - 4; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]--;
+                    }
+                }
+
+                // If Z-Piece is at the floor and there is free sace, the pivot coords are moved up from the floor so it can rotate
+                if (zPieceAtFloor) {
+                    if (currentPiece == 1 && pieceRotation == 2) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 3);
+                        for (int y1 = pivot[1] + 3, y2 = 0; y1 > pivot[1] - 2; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]++;
+                    }
+                }
+
+                // If S-Piece is at the wall and there is free space, the pivot coords are moved out from the wall so it can rotate
+                if (sPieceAtWallLeft) {
+                    // If S-Piece is at rotation 1 and there is free space, the pivot coords are moved one tile to the right
+                    if (currentPiece == 2 && pieceRotation == 3) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 0);
+                        for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
+                            for (int x1 = pivot[0] - 1, x2 = 0; x1 < pivot[0] + 4; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3)
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                            }
+                        }
+                        pivot[0]++;
+                    }
+                }
+
+                // If S-Piece is at the wall and there is free space, the pivot coords are moved out from the wall so it can rotate
+                if (sPieceAtWallRight) {
+                    // If S-Piece is at rotation 1 and there is free space, the pivot coords are moved one tile to the left
+                    if (currentPiece == 2 && pieceRotation == 1) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 2);
+                        for (int y1 = pivot[1] + 2, y2 = 0; y1 > pivot[1] - 3; y1--, y2++) {
+                            for (int x1 = pivot[0] - 3, x2 = 0; x1 < pivot[0] + 2; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3)
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                            }
+                        }
+                        pivot[0]--;
+                    }
+                }
+
+                // If S-Piece is at the ceiling and there is free space, the pivot coords are moved down from the ceiling so it can rotate
+                if (sPieceAtCeiling) {
+                    if (currentPiece == 2 && pieceRotation == 0) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 1);
+                        for (int y1 = pivot[1] + 1, y2 = 0; y1 > pivot[1] - 4; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]--;
+                    }
+                }
+
+                // If S-Piece is at the floor and there is free space, the pivot coords are moved up from the floor so it can rotate
+                if (sPieceAtFloor) {
+                    if (currentPiece == 2 && pieceRotation == 2) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 3);
+                        for (int y1 = pivot[1] + 3, y2 = 0; y1 > pivot[1] - 2; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]++;
+                    }
+                }
+
                 // If L-Piece is at the wall and there is free space, the pivot coords are moved out from the wall so it can rotate
                 if (lPieceAtWallLeft) {
                     // If L-Piece is at rotation 1 and there is free space, the pivot coords are moved one tile to the right
@@ -383,6 +566,21 @@ public class GameBoard implements Screen {
                             }
                         }
                         pivot[0]--;
+                    }
+                }
+
+                // If L-Piece is at the floor and there is free space, the pivot coords are moved up from the floor so it can rotate
+                if (lPieceAtFloor) {
+                    if (currentPiece == 3 && pieceRotation == 0) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 1);
+                        for (int y1 = pivot[1] + 3, y2 = 0; y1 > pivot[1] - 2; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]++;
                     }
                 }
 
@@ -416,6 +614,21 @@ public class GameBoard implements Screen {
                     }
                 }
 
+                // If J-Piece is at the floor and there is free space, the pivot coords are moved up from the floor so it can rotate
+                if (jPieceAtFloor) {
+                    if (currentPiece == 4 && pieceRotation == 0) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 1);
+                        for (int y1 = pivot[1] + 3, y2 = 0; y1 > pivot[1] - 2; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]++;
+                    }
+                }
+
                 // If T-Piece is at the wall and there is free space, the pivot coords are moved out from the wall so it can rotate
                 if (tPieceAtWallLeft) {
                     // If T-Piece is at rotation 1 and there is free space, the pivot coords are moved one tile to the right
@@ -445,6 +658,23 @@ public class GameBoard implements Screen {
                         pivot[0]--;
                     }
                 }
+
+                // If T-Piece is at the floor and there is free space, the pivot coords are moved up from the floor so it can rotate
+                if (tPieceAtFloor) {
+                    if (currentPiece == 6 && pieceRotation == 0) {
+                        int[][] nextPiece = Pieces.getPiece(currentPiece, 1);
+                        for (int y1 = pivot[1] + 3, y2 = 0; y1 > pivot[1] - 2; y1--, y2++) {
+                            for (int x1 = pivot[0] - 2, x2 = 0; x1 < pivot[0] + 3; x1++, x2++) {
+                                if (nextPiece[y2][x2] != 0 && nextPiece[y2][x2] != 3) {
+                                    if (x1 < 0 || x1 > 9 || y1 < 0 || y1 > 19 || board[y1][x1].equals("FILLED")) return;
+                                }
+                            }
+                        }
+                        pivot[1]++;
+                    }
+                }
+
+
 
                 // Updates the currently falling piece's rotation
                 if (pieceRotation == 3) pieceRotation = 0;
@@ -528,7 +758,7 @@ public class GameBoard implements Screen {
 
             // If the piece cannot move down it will be stored in the landedTiles array
             if (pieceLanded) {
-                if (moveDownTimer > moveDownTimeout) {
+                if (moveDownTimer > moveDownSpeed) {
                     landPiece();    // Lands the current tile
                 }
             }
@@ -537,7 +767,7 @@ public class GameBoard implements Screen {
 
         // If there is a piece falling it will move downwards every second
         if (pieceIsFalling) {
-            if (moveDownTimer > moveDownTimeout) {
+            if (moveDownTimer > moveDownSpeed) {
                 movePieceVertically(-1);
                 pivot[1]--;
                 moveDownTimer = 0;
