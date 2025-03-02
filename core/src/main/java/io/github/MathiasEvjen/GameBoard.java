@@ -902,7 +902,7 @@ public class GameBoard implements Screen {
 
         for (Sprite sprite : fallingPiece) {
 //                System.out.println(lowestTile);
-            if ((sprite.getY() != 0 && board[(int)sprite.getY()-FLOOR-1][(int)sprite.getX()-LEFT_EDGE].equals("FILLED")) || sprite.getY() == FLOOR) {
+            if ((sprite.getY() != FLOOR && board[(int)sprite.getY()-FLOOR-1][(int)sprite.getX()-LEFT_EDGE].equals("FILLED")) || sprite.getY() == FLOOR) {
                 pieceLanded = true;
                 break;
             }
