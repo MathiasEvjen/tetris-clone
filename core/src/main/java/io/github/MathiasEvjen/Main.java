@@ -17,7 +17,7 @@ public class Main extends Game {
     public void create() {
         batch = new SpriteBatch();
         font = new BitmapFont();
-        viewport = new FitViewport(10, 20);
+        viewport = new FitViewport(22, 25);
 
         font.setUseIntegerPositions(false);
         font.getData().setScale(viewport.getWorldWidth(), viewport.getWorldWidth());
