@@ -144,17 +144,23 @@ public class GameBoard implements Screen {
                 currentPiece = heldPiece;
                 heldPiece = tmp;
             }
-            else if (holdingPiece && firstHold) {
+
+            // If it is the first held piece, the held piece is set as the current piece, the current piece is set as the next piece
+            // Creates a random next piece and sets firstHold as false so it knows that there is a held piece
+            else if (holdingPiece) {
+                heldPiece = currentPiece;
                 currentPiece = nextPiece;
                 nextPiece = MathUtils.random(0, 6);
                 firstHold = false;
             }
-            // Creates new falling piece and next piece
+
+            // Sets the current piece as next piece and creates a random next piece
             else {
                 currentPiece = nextPiece;
                 nextPiece = MathUtils.random(0, 6);
             }
 
+            pieceRotation = 0;
             int[][] piece = Pieces.getPiece(currentPiece, pieceRotation);   // Creates a piece from currentPiece
 
             switch (currentPiece) {
@@ -180,7 +186,6 @@ public class GameBoard implements Screen {
             }
 
             int tiles = 0;
-            pieceRotation = 0;
 
             moveDownTimer = 0;
 
@@ -388,16 +393,10 @@ public class GameBoard implements Screen {
             }
         }
 
-        // Hold the currently falling piece
+        // Hold the currently falling piece if the falling piece hasn't already been held
         if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)) {
             if (holdingPiece) return;
-
-            if (heldPieceSprites[0] == null && !holdingPiece) {
-                holdPiece(currentPiece);
-            }
-            else if (!holdingPiece) {
-                holdPiece(currentPiece);
-            }
+            holdPiece(currentPiece);
         }
 
         // Move piece down continually
