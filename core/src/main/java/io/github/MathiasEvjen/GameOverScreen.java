@@ -24,7 +24,7 @@ public class GameOverScreen implements Screen {
 
     private Array<Sprite> landedTiles;
 
-    public GameOverScreen(final Main game, Array<Sprite> landedTiles) {
+    public GameOverScreen(final Main game, Array<Sprite> landedTiles, int score) {
         this.game = game;
 
         background = new Texture("background.png");
@@ -46,6 +46,7 @@ public class GameOverScreen implements Screen {
         tileTex[6] = new Sprite(tTex);
 
         this.landedTiles = landedTiles;
+        System.out.println(score);
     }
 
     @Override
