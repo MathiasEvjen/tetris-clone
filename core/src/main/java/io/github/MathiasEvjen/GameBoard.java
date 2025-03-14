@@ -1,6 +1,9 @@
 /*
     TODO
 
+    Bug:
+    Enkelte ganger droppes to brikker samtidig når man trykker space og den ene lander på feil y-pos (så langt bare kvadrat-brikken)
+
     Potensielt skrive om checkIfPieceAtEdge og se om de kan legges inn i brikkenes klasser
 
     Fikse tiden brikker bruker på å lande
@@ -72,7 +75,7 @@ public class GameBoard implements Screen {
     private Sprite[] tileTexSprites;
     private Sprite[] ghostTileTexSprites;
 
-    private Sprite[] numbers;
+    private Texture[] numbers;
     private Array<Sprite> scoreDigits;
 
     private Sprite[] fallingPieceSprites;
@@ -85,6 +88,7 @@ public class GameBoard implements Screen {
     private float moveSpeedSeconds;
     private float moveDownTimerSeconds;
     private float moveDownSpeedSeconds;
+    private float landTimeSeconds;
 
     private boolean currentPieceIsFalling;
     private int currentPieceRotation;
@@ -164,25 +168,25 @@ public class GameBoard implements Screen {
         four = new Texture("four.png");
         five = new Texture("five.png");
         six = new Texture("six.png");
-        seven = new Texture("seven.png");
+        seven =new Texture("seven.png");
         eight = new Texture("eight.png");
-        nine = new Texture("nine.png");
+        nine =new Texture("nine.png");
 
-        numbers = new Sprite[10];
-        numbers[0] = new Sprite(zero);
-        numbers[1] = new Sprite(one);
-        numbers[2] = new Sprite(two);
-        numbers[3] = new Sprite(three);
-        numbers[4] = new Sprite(four);
-        numbers[5] = new Sprite(five);
-        numbers[6] = new Sprite(six);
-        numbers[7] = new Sprite(seven);
-        numbers[8] = new Sprite(eight);
-        numbers[9] = new Sprite(nine);
+        numbers = new Texture[10];
+        numbers[0] =  zero;
+        numbers[1] =  one;
+        numbers[2] =  two;
+        numbers[3] =  three;
+        numbers[4] =  four;
+        numbers[5] =  five;
+        numbers[6] =  six;
+        numbers[7] =  seven;
+        numbers[8] =  eight;
+        numbers[9] =  nine ;
 
         scoreDigits = new Array<>();
 
-        for (Sprite num : numbers) num.setSize(2, 2);
+//        for (Sprite num : numbers) num.setSize(2, 2);
 
         nextPieceID = MathUtils.random(0, 6);
         holdingPiece = false;
@@ -195,6 +199,7 @@ public class GameBoard implements Screen {
 
         moveSpeedSeconds = .1175f;
         moveDownSpeedSeconds = 1f;   // Defines the dropspeed of the pieces
+        landTimeSeconds = .8f;
 
         animationSpeed = -300f;
         dropToBottom = false;
@@ -387,7 +392,13 @@ public class GameBoard implements Screen {
     public void logic() {
         float dt = Gdx.graphics.getDeltaTime();
 
+
+        // When SPACE is pressed, the currently falling piece is fluidly moved to the bottom and landed
         if (dropToBottom) {
+            for (Sprite tile : fallingPieceSprites) {
+                gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE] = "EMPTY";
+            }
+
             for (int i = 0; i < fallingPieceSprites.length; i++) {
                 fallingPieceSprites[i].translateY(animationSpeed * dt);
                 if (findLowestFallingTileY() <= FLOOR || fallingPieceSprites[i].getY() <= ghostPieceSprites[i].getY()) {
@@ -403,7 +414,7 @@ public class GameBoard implements Screen {
         }
 
         // If there is a piece falling, a check on whether it cannot move further down is done
-        if (currentPieceIsFalling) {
+        if (!dropToBottom && currentPieceIsFalling) {
             pieceLanded = false;
 
             // Checks the tiles to see if the tile directly under it is either filled or the bottom of the gameBoard
@@ -411,13 +422,13 @@ public class GameBoard implements Screen {
             checkIfPieceLanded();
 
             // If the piece cannot move down it will be stored in the landedTilesSprites array
-            if (pieceLanded && moveDownTimerSeconds > moveDownSpeedSeconds) {
+            if (pieceLanded && moveDownTimerSeconds > landTimeSeconds) {
                 landPiece();    // Lands the current tile
             }
         }
 
         // If there is a piece falling it will move downwards every second
-        if (currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
+        if (!dropToBottom && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
             movePieceVertically(-1);
             piecePivotCoords[1]--;
             moveDownTimerSeconds = 0;
@@ -447,17 +458,21 @@ public class GameBoard implements Screen {
         }
 
         if (score == 0) {
-            scoreDigits.add(numbers[0]);
+            scoreDigits.add(new Sprite(numbers[0]));
+            scoreDigits.get(0).setSize(2, 2);
             scoreDigits.get(0).setX(14);
             scoreDigits.get(0).setY(22);
         }
 
         int currentScore = score;
         Array<Integer> tmp = new Array<>();
-//        int scoreDigitCounter = 0;
+        int scoreDigitCounter = 0;
         if (scoreDigits.size != 0) scoreDigits.removeIndex(0);
         while (currentScore != 0) {
-            scoreDigits.add(numbers[currentScore % 10]);
+//            System.out.println();
+            scoreDigits.add(new Sprite(numbers[currentScore % 10]));
+            scoreDigits.get(scoreDigitCounter).setSize(2, 2);
+
             tmp.add(currentScore % 10);
 //            scoreDigits.get(scoreDigitCounter).setX(14 - (2 * scoreDigitCounter));
 //            scoreDigits.get(scoreDigitCounter).setY(22);
@@ -465,20 +480,26 @@ public class GameBoard implements Screen {
 
             currentScore = currentScore / 10;
 
-//            scoreDigitCounter++;
+            scoreDigitCounter++;
         }
 
 
         for (int i = scoreDigits.size-1; i >= 0; i--) {
+//            System.out.println(i);
             scoreDigits.get(i).setX(14 - (2 * i));
             scoreDigits.get(i).setY(22);
         }
+
         System.out.println("Digits:" + scoreDigits.size);
         System.out.println("Score:" + score);
 
-//        for (int tall : tmp) System.out.println(tall);
+//        for (int tall : tmp) System.out.print(tall + " ");
 //        System.out.println(tmp.size);
         System.out.println("");
+
+//        for (int y = gameBoard.length-1; y >= 0; y--) {
+//            System.out.println(Arrays.toString(gameBoard[y]));
+//        }
     }
 
 
