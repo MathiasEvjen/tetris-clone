@@ -1,7 +1,13 @@
 /*
     TODO
+
+    Potensielt skrive om checkIfPieceAtEdge og se om de kan legges inn i brikkenes klasser
+
+    Fikse tiden brikker bruker på å lande
     Legge til score og level visuelt på skjermen mens man spiller
     Legge til pausefunksjonalitet
+
+    Legge til animasjon for sletting av brikker
 */
 
 package io.github.MathiasEvjen;
@@ -51,8 +57,23 @@ public class GameBoard implements Screen {
     private final Texture squarePieceGhostTex;
     private final Texture tPieceGhostTex;
 
+    // Numbers
+    private final Texture zero;
+    private final Texture one;
+    private final Texture two;
+    private final Texture three;
+    private final Texture four;
+    private final Texture five;
+    private final Texture six;
+    private final Texture seven;
+    private final Texture eight;
+    private final Texture nine;
+
     private Sprite[] tileTexSprites;
     private Sprite[] ghostTileTexSprites;
+
+    private Sprite[] numbers;
+    private Array<Sprite> scoreDigits;
 
     private Sprite[] fallingPieceSprites;
     private Sprite[] nextPieceIDSprites;
@@ -81,6 +102,14 @@ public class GameBoard implements Screen {
     private int completedRows;
 
     private int distanceToBottom;
+
+    // Animation
+    private float animationTimer;
+    private float animationSpeed;
+
+    private float dropSpeed;
+
+    private boolean dropToBottom;
 
 
     public GameBoard(final Main game) {
@@ -127,6 +156,34 @@ public class GameBoard implements Screen {
         ghostTileTexSprites[5] = new Sprite(squarePieceGhostTex);
         ghostTileTexSprites[6] = new Sprite(tPieceGhostTex);
 
+        // Init numbers
+        zero = new Texture("zero.png");
+        one = new Texture("one.png");
+        two = new Texture("two.png");
+        three = new Texture("three.png");
+        four = new Texture("four.png");
+        five = new Texture("five.png");
+        six = new Texture("six.png");
+        seven = new Texture("seven.png");
+        eight = new Texture("eight.png");
+        nine = new Texture("nine.png");
+
+        numbers = new Sprite[10];
+        numbers[0] = new Sprite(zero);
+        numbers[1] = new Sprite(one);
+        numbers[2] = new Sprite(two);
+        numbers[3] = new Sprite(three);
+        numbers[4] = new Sprite(four);
+        numbers[5] = new Sprite(five);
+        numbers[6] = new Sprite(six);
+        numbers[7] = new Sprite(seven);
+        numbers[8] = new Sprite(eight);
+        numbers[9] = new Sprite(nine);
+
+        scoreDigits = new Array<>();
+
+        for (Sprite num : numbers) num.setSize(2, 2);
+
         nextPieceID = MathUtils.random(0, 6);
         holdingPiece = false;
         firstHeldPiece = true;
@@ -136,8 +193,11 @@ public class GameBoard implements Screen {
         heldPieceSprites = new Sprite[4];
         ghostPieceSprites = new Sprite[4];
 
-        moveSpeedSeconds = .1f;
+        moveSpeedSeconds = .1175f;
         moveDownSpeedSeconds = 1f;   // Defines the dropspeed of the pieces
+
+        animationSpeed = -350f;
+        dropToBottom = false;
 
         piecePivotCoords = new int[2];
 
@@ -163,6 +223,7 @@ public class GameBoard implements Screen {
         float dt = Gdx.graphics.getDeltaTime();
         moveTimerSeconds += dt;
         moveDownTimerSeconds += dt;
+        animationTimer += dt;
         input();
         logic();
         draw();
@@ -250,6 +311,11 @@ public class GameBoard implements Screen {
             tile.draw(game.batch);
         }
 
+
+        for (Sprite scoreDigit : scoreDigits) {
+            scoreDigit.draw(game.batch);
+        }
+
         game.batch.end();
     }
 
@@ -259,12 +325,21 @@ public class GameBoard implements Screen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             // Find the lowest point in the piece
 
-            for (int i = 0; i < fallingPieceSprites.length; i++) {
-                fallingPieceSprites[i].setY(ghostPieceSprites[i].getY());
-            }
-
-            landPiece();
+            dropToBottom = true;
             score += distanceToBottom;
+
+//            while (fallingPieceSprites[0].getY() > ghostPieceSprites[0].getY()) {
+//                for (Sprite fallingPieceSprite : fallingPieceSprites) {
+//                    fallingPieceSprite.translateY(dropSpeed * dt);
+//                }
+//            }
+//
+////            for (int i = 0; i < fallingPieceSprites.length; i++) {
+////                fallingPieceSprites[i].setY(ghostPieceSprites[i].getY());
+////            }
+//
+//            landPiece();
+//            score += distanceToBottom;
         }
 
         // When the up key is pressed, the currently falling piece is rotated once clockwise
@@ -272,7 +347,7 @@ public class GameBoard implements Screen {
             if (pieceLanded) moveDownTimerSeconds = 0;
 
             // Checks if the current piece is at an edge and needs to be moved out to rotate
-            checkIfPieceAtEdge();
+            checkIfPiecesAtEdge();
 
             // Updates the currently falling piece's rotation
             if (currentPieceRotation == 3) currentPieceRotation = 0;
@@ -316,9 +391,30 @@ public class GameBoard implements Screen {
                 moveTimerSeconds = 0;
             }
         }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            pause();
+        }
     }
 
     public void logic() {
+        float dt = Gdx.graphics.getDeltaTime();
+
+        if (dropToBottom) {
+            for (int i = 0; i < fallingPieceSprites.length; i++) {
+                fallingPieceSprites[i].translateY(animationSpeed * dt);
+                if (findLowestFallingTileY() <= FLOOR || fallingPieceSprites[i].getY() <= ghostPieceSprites[i].getY()) {
+                    for (int t = 0; t < fallingPieceSprites.length; t++) {
+                        fallingPieceSprites[t].setY(ghostPieceSprites[t].getY());
+                    }
+                    dropToBottom = false;
+                    landPiece();
+                    break;
+                };
+
+            }
+        }
+
         // If there is a piece falling, a check on whether it cannot move further down is done
         if (currentPieceIsFalling) {
             pieceLanded = false;
@@ -343,7 +439,7 @@ public class GameBoard implements Screen {
         removeCompletedRows();  // Checks for filled rows and removes them
 
         // Updates the location of ghost piece
-        if (fallingPieceSprites[0] != null) {
+        if (fallingPieceSprites[0] != null && !dropToBottom) {
             int lowestFallingTileY = findLowestFallingTileY();
             findDistanceToBottom(lowestFallingTileY);
 
@@ -358,6 +454,44 @@ public class GameBoard implements Screen {
                 game.setScreen(new GameOverScreen(game, landedTilesSprites, score));
             }
         }
+
+        for (int i = 0; i < scoreDigits.size; i++) {
+            scoreDigits.removeIndex(i);
+        }
+
+        if (score == 0) {
+            scoreDigits.add(numbers[0]);
+            scoreDigits.get(0).setX(14);
+            scoreDigits.get(0).setY(22);
+        }
+
+        int currentScore = score;
+        Array<Integer> tmp = new Array<>();
+//        int scoreDigitCounter = 0;
+        if (scoreDigits.size != 0) scoreDigits.removeIndex(0);
+        while (currentScore != 0) {
+            scoreDigits.add(numbers[currentScore % 10]);
+            tmp.add(currentScore % 10);
+//            scoreDigits.get(scoreDigitCounter).setX(14 - (2 * scoreDigitCounter));
+//            scoreDigits.get(scoreDigitCounter).setY(22);
+//            System.out.print(currentScore % 10 + " a");
+
+            currentScore = currentScore / 10;
+
+//            scoreDigitCounter++;
+        }
+
+
+        for (int i = scoreDigits.size-1; i >= 0; i--) {
+            scoreDigits.get(i).setX(14 - (2 * i));
+            scoreDigits.get(i).setY(22);
+        }
+        System.out.println("Digits:" + scoreDigits.size);
+        System.out.println("Score:" + score);
+
+//        for (int tall : tmp) System.out.println(tall);
+//        System.out.println(tmp.size);
+        System.out.println("");
     }
 
 
@@ -406,19 +540,6 @@ public class GameBoard implements Screen {
                 startY = CEILING - 1;
                 stopY = CEILING - 5;
                 break;
-        }
-    }
-
-    private void createGhostPiece(int currentPieceID) {
-        int lowestFallingTileY = findLowestFallingTileY();
-        findDistanceToBottom(lowestFallingTileY);
-
-        for (int i = 0; i < fallingPieceSprites.length; i++) {
-            ghostPieceSprites[i] = new Sprite(ghostTileTexSprites[currentPieceID]);
-            ghostPieceSprites[i].setSize(1, 1);
-            ghostPieceSprites[i].setX(fallingPieceSprites[i].getX());
-            ghostPieceSprites[i].setY(fallingPieceSprites[i].getY() - distanceToBottom);
-            ghostPieceSprites[i].draw(game.batch);
         }
     }
 
@@ -477,6 +598,19 @@ public class GameBoard implements Screen {
                     tiles++;
                 }
             }
+        }
+    }
+
+    private void createGhostPiece(int currentPieceID) {
+        int lowestFallingTileY = findLowestFallingTileY();
+        findDistanceToBottom(lowestFallingTileY);
+
+        for (int i = 0; i < fallingPieceSprites.length; i++) {
+            ghostPieceSprites[i] = new Sprite(ghostTileTexSprites[currentPieceID]);
+            ghostPieceSprites[i].setSize(1, 1);
+            ghostPieceSprites[i].setX(fallingPieceSprites[i].getX());
+            ghostPieceSprites[i].setY(fallingPieceSprites[i].getY() - distanceToBottom);
+            ghostPieceSprites[i].draw(game.batch);
         }
     }
 
@@ -558,7 +692,7 @@ public class GameBoard implements Screen {
         return newRotationCoords;
     }
 
-    private void checkIfPieceAtEdge() {
+    private void checkIfPiecesAtEdge() {
         switch (currentPieceID) {
             case 0:
                 iPieceAtEdge();
@@ -1156,7 +1290,7 @@ public class GameBoard implements Screen {
             level++;
             moveDownSpeedSeconds *= .85f;
         }
-        System.out.println(level);
+//        System.out.println(level);
     }
 
     // Calculates and returns points when removing one row based on the player's current level

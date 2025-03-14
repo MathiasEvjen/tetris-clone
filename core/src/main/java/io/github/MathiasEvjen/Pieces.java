@@ -31,32 +31,4 @@ public class Pieces {
                 return new SquarePiece().getPiece();
         }
     }
-
-    public SquarePiece getSquarePiece() {
-        return new SquarePiece();
-    }
-
-    public IPiece getIPiece() {
-        return new IPiece();
-    }
-
-    public LPiece getLPiece() {
-        return new LPiece();
-    }
-
-    public JPiece getLMirroredPiece() {
-        return new JPiece();
-    }
-
-    public ZPiece getNPiece() {
-        return new ZPiece();
-    }
-
-    public SPiece getNMirroredPiece() {
-        return new SPiece();
-    }
-
-    public TPiece getTPiece() {
-        return new TPiece();
-    }
 }
