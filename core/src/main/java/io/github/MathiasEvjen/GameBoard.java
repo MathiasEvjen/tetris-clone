@@ -327,19 +327,6 @@ public class GameBoard implements Screen {
 
             dropToBottom = true;
             score += distanceToBottom;
-
-//            while (fallingPieceSprites[0].getY() > ghostPieceSprites[0].getY()) {
-//                for (Sprite fallingPieceSprite : fallingPieceSprites) {
-//                    fallingPieceSprite.translateY(dropSpeed * dt);
-//                }
-//            }
-//
-////            for (int i = 0; i < fallingPieceSprites.length; i++) {
-////                fallingPieceSprites[i].setY(ghostPieceSprites[i].getY());
-////            }
-//
-//            landPiece();
-//            score += distanceToBottom;
         }
 
         // When the up key is pressed, the currently falling piece is rotated once clockwise
@@ -368,7 +355,7 @@ public class GameBoard implements Screen {
         }
 
         // Moves piece down when the down key is pressed
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN) && !dropToBottom) {
             if (moveTimerSeconds > moveSpeedSeconds) {
                 movePieceDown();
                 moveTimerSeconds = 0;
@@ -377,7 +364,7 @@ public class GameBoard implements Screen {
         }
 
         // Moves piece left when the left key is pressed
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT) && !dropToBottom) {
             if (moveTimerSeconds > moveSpeedSeconds) {
                 movePieceLeft();
                 moveTimerSeconds = 0;
@@ -385,7 +372,7 @@ public class GameBoard implements Screen {
         }
 
         // Moves piece right when the right key is pressed
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) && !dropToBottom) {
             if (moveTimerSeconds > moveSpeedSeconds) {
                 movePieceRight();
                 moveTimerSeconds = 0;
