@@ -196,7 +196,7 @@ public class GameBoard implements Screen {
         moveSpeedSeconds = .1175f;
         moveDownSpeedSeconds = 1f;   // Defines the dropspeed of the pieces
 
-        animationSpeed = -350f;
+        animationSpeed = -300f;
         dropToBottom = false;
 
         piecePivotCoords = new int[2];
