@@ -412,12 +412,18 @@ public class GameBoard implements Screen {
     public void logic() {
         float dt = Gdx.graphics.getDeltaTime();
 
-        if (remove) {
-            removeRows();
-            return;
+        // Updates the location of ghost piece
+        if (fallingPieceSprites[0] != null && !dropToBottom) {
+            int lowestFallingTileY = findLowestFallingTileY();
+            findDistanceToBottom(lowestFallingTileY);
+
+            for (int i = 0; i < ghostPieceSprites.length; i++) {
+                ghostPieceSprites[i].setX(fallingPieceSprites[i].getX());
+                ghostPieceSprites[i].setY(fallingPieceSprites[i].getY() - distanceToBottom);
+            }
         }
 
-        removeCompletedRows();  // Checks for filled rows and removes them
+
 
 
         // When SPACE is pressed, the currently falling piece is fluidly moved to the bottom and landed
@@ -441,7 +447,7 @@ public class GameBoard implements Screen {
             }
         }
 
-        System.out.println(currentPieceIsFalling);
+
 
         // If there is a piece falling, a check on whether it cannot move further down is done
         if (!dropToBottom && currentPieceIsFalling) {
@@ -462,17 +468,6 @@ public class GameBoard implements Screen {
             movePieceVertically(-1);
             piecePivotCoords[1]--;
             moveDownTimerSeconds = 0;
-        }
-
-        // Updates the location of ghost piece
-        if (fallingPieceSprites[0] != null && !dropToBottom) {
-            int lowestFallingTileY = findLowestFallingTileY();
-            findDistanceToBottom(lowestFallingTileY);
-
-            for (int i = 0; i < ghostPieceSprites.length; i++) {
-                ghostPieceSprites[i].setX(fallingPieceSprites[i].getX());
-                ghostPieceSprites[i].setY(fallingPieceSprites[i].getY() - distanceToBottom);
-            }
         }
 
         for (Sprite tile : landedTilesSprites) {
@@ -517,6 +512,13 @@ public class GameBoard implements Screen {
             scoreDigits.get(i).setX(14 - (2 * i));
             scoreDigits.get(i).setY(22);
         }
+
+        if (remove) {
+            removeRows();
+            return;
+        }
+
+        removeCompletedRows();  // Checks for filled rows and removes them
 
 //        System.out.println("Digits:" + scoreDigits.size);
 //        System.out.println("Score:" + score);
