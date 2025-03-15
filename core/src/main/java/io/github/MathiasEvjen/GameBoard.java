@@ -769,10 +769,20 @@ public class GameBoard implements Screen {
         return iPieceAtWallRightCounter >= 2;
     }
 
+    private boolean checkIfIPieceAtFloor() {
+        int iPieceAtFloorCounter = 0;
+        for (Sprite tile : fallingPieceSprites) {
+            if (tile.getY() == FLOOR || gameBoard[(int) tile.getY() - FLOOR - 1][(int) tile.getX() - LEFT_EDGE].equals("X"))
+                iPieceAtFloorCounter++;
+        }
+        return iPieceAtFloorCounter >= 2;
+    }
+
     private void iPieceAtEdge() {
         // Checks if an I-Piece is at a left or right wall
         boolean iPieceAtWallLeft = checkIfIPieceAtWallLeft();
         boolean iPieceAtWallRight = checkIfIPieceAtWallRight();
+        boolean iPieceAtFloor = checkIfIPieceAtFloor();
 
         // If I-Piece is at a left wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
         if (iPieceAtWallLeft) {
@@ -813,6 +823,25 @@ public class GameBoard implements Screen {
                     }
                 }
                 piecePivotCoords[0] -= 2;
+            }
+        }
+
+        if (iPieceAtFloor) {
+            if (currentPieceRotation == 0) {
+                int[][] nextRotation = Pieces.getPiece(currentPieceID, currentPieceRotation + 1);
+                for (int y1 = piecePivotCoords[1] + 4, y2 = 0; y1 > piecePivotCoords[1] - 1; y1--, y2++) {
+                    for (int x1 = piecePivotCoords[0] - 2, x2 = 0; x1 < piecePivotCoords[0] + 3; x1++, x2++) {
+                        if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3) {
+                            if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE].equals("X")) return;
+                        }
+                    }
+                }
+                piecePivotCoords[1] += 2;
+            }
+
+            if (currentPieceRotation == 2) {
+                int[][] nextRotation = Pieces.getPiece(currentPieceID, currentPieceRotation + 1);
+                movePieceOutFromFloor(nextRotation);
             }
         }
     }
