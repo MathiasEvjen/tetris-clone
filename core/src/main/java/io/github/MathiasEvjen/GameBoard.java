@@ -1245,12 +1245,8 @@ public class GameBoard implements Screen {
     private void removeRows() {
         if (removeX > 9) {
             removeX = 0;
-            if (removedCount == rowsToRemove.size-1) {
-                removedRow = true;
-                remove = false;
-            } else {
-                removedCount++;
-            }
+            removedRow = true;
+            remove = false;
         }
 
         if (removeTimerSeconds > removeSpeedSeconds) {
