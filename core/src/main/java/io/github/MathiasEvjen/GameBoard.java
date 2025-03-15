@@ -1433,6 +1433,19 @@ public class GameBoard implements Screen {
         jPieceTex.dispose();
         squarePieceTex.dispose();
         tPieceTex.dispose();
+
         background.dispose();
+
+        iPieceGhostTex.dispose();
+        zPieceGhostTex.dispose();
+        sPieceGhostTex.dispose();
+        lPieceGhostTex.dispose();
+        jPieceGhostTex.dispose();
+        squarePieceGhostTex.dispose();
+        tPieceGhostTex.dispose();
+
+        for (Texture num : numbers) {
+            num.dispose();
+        }
     }
 }
