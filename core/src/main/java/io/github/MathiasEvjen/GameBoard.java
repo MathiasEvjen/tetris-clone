@@ -116,6 +116,14 @@ public class GameBoard implements Screen {
     private boolean dropToBottom;
 
 
+    private int removeRow;
+    private boolean remove;
+    private int removeX;
+    private float removeSpeedSeconds;
+    private float removeTimerSeconds;
+    private boolean removedRow;
+
+
     public GameBoard(final Main game) {
         this.game = game;
 
@@ -216,6 +224,11 @@ public class GameBoard implements Screen {
         score = 0;
         level = 1;
         completedRows = 0;
+
+        remove = false;
+        removeX = 0;
+        removeSpeedSeconds = .05f;
+        removedRow = false;
     }
 
     @Override
@@ -229,6 +242,7 @@ public class GameBoard implements Screen {
         moveTimerSeconds += dt;
         moveDownTimerSeconds += dt;
         animationTimer += dt;
+        removeTimerSeconds += dt;
         input();
         logic();
         draw();
@@ -392,6 +406,42 @@ public class GameBoard implements Screen {
     public void logic() {
         float dt = Gdx.graphics.getDeltaTime();
 
+        if (!remove) removeCompletedRows();  // Checks for filled rows and removes them
+
+        if (remove) {
+            if (removeTimerSeconds > removeSpeedSeconds) {
+                // Loops through all the landed tiles on the gameBoard
+                for (Sprite tile : landedTilesSprites) {
+                    // When a landed tile on that position is found it is deleted
+                    if (tile.getY()-FLOOR == removeRow && tile.getX()-LEFT_EDGE == removeX) {
+                        landedTilesSprites.removeIndex(landedTilesSprites.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
+                    }
+                }
+
+                // Sets the tile slot on the gameBoard to empty
+                gameBoard[removeRow][removeX] = "EMPTY";
+
+
+                if (removeX == 9) {
+                    removeX = 0;
+                    remove = false;
+                    removedRow = true;
+                }
+
+                removeTimerSeconds = 0;
+                removeX++;
+            }
+
+            // If a row was removed, the rest of the gameBoard is moved down to fill the now empty space
+            if (removedRow) {
+                for (int y2 = removeRow + 1; y2 < gameBoard.length; y2++) {
+                    moveLandedTileVertically(y2);
+                }
+                removedRow = false;
+            }
+
+            return;
+        }
 
         // When SPACE is pressed, the currently falling piece is fluidly moved to the bottom and landed
         if (dropToBottom) {
@@ -401,6 +451,7 @@ public class GameBoard implements Screen {
 
             for (int i = 0; i < fallingPieceSprites.length; i++) {
                 fallingPieceSprites[i].translateY(animationSpeed * dt);
+
                 if (findLowestFallingTileY() <= FLOOR || fallingPieceSprites[i].getY() <= ghostPieceSprites[i].getY()) {
                     for (int t = 0; t < fallingPieceSprites.length; t++) {
                         fallingPieceSprites[t].setY(ghostPieceSprites[t].getY());
@@ -433,8 +484,6 @@ public class GameBoard implements Screen {
             piecePivotCoords[1]--;
             moveDownTimerSeconds = 0;
         }
-
-        removeCompletedRows();  // Checks for filled rows and removes them
 
         // Updates the location of ghost piece
         if (fallingPieceSprites[0] != null && !dropToBottom) {
@@ -490,12 +539,12 @@ public class GameBoard implements Screen {
             scoreDigits.get(i).setY(22);
         }
 
-        System.out.println("Digits:" + scoreDigits.size);
-        System.out.println("Score:" + score);
+//        System.out.println("Digits:" + scoreDigits.size);
+//        System.out.println("Score:" + score);
 
 //        for (int tall : tmp) System.out.print(tall + " ");
 //        System.out.println(tmp.size);
-        System.out.println("");
+//        System.out.println("");
 
 //        for (int y = gameBoard.length-1; y >= 0; y--) {
 //            System.out.println(Arrays.toString(gameBoard[y]));
@@ -1223,22 +1272,13 @@ public class GameBoard implements Screen {
     // Deletes the line at the given y-position
     private void removeRow(int y) {
         // Loops through all x-positions in the line
-        for (int x = 0; x < 10; x++) {
-            // Loops through all the landed tiles on the gameBoard
-            for (Sprite tile : landedTilesSprites) {
-                // When a landed tile on that position is found it is deleted
-                if (tile.getY()-FLOOR == y && tile.getX()-LEFT_EDGE == x) {
-                    landedTilesSprites.removeIndex(landedTilesSprites.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
-                }
-            }
-            // Sets the removed slot on the gameBoard to empty
-            gameBoard[y][x] = "EMPTY";
-        }
+        removeRow = y;
+        remove = true;
     }
 
     // Goes through the whole gameBoard and removes the lines that are full
     private void removeCompletedRows() {
-        boolean removedRow = false;
+
         int filledTiles = 0;    // Holds the number of tiles filled in the row
         Array<Integer> filledRows = new Array<>();
 
@@ -1255,49 +1295,40 @@ public class GameBoard implements Screen {
             if (filledTiles == gameBoard[y1].length) {
                 removeRow(y1);
                 y1--;    // Decrements y1 so the current line is checked again when all the tiles are moved one down
-                removedRow = true;
-                removedRowsCount++;
+//                removedRow = true;
+                filledTiles = 0;    // Resets the number of filled tiles
+                break;
+//                removedRowsCount++;
             }
-
-            filledTiles = 0;    // Resets the number of filled tiles
-
-            // If a row was removed, the rest of the gameBoard is moved down to fill the now empty space
-            if (removedRow) {
-                for (int y2 = y1 + 1; y2 < gameBoard.length; y2++) {
-                    moveLandedTileVertically(y2);
-                }
-            }
-
-            removedRow = false;
         }
 
 
         // Calculates and adds points to the score total
-        switch (removedRowsCount) {
-            case 1:
-                score += calculatePoints1Row(level);
-                break;
-            case 2:
-                score += calculatePoints2Rows(level);
-                break;
-            case 3:
-                score += calculatePoints3Rows(level);
-                break;
-            case 4:
-                score += calculatePoints4Rows(level);
-                break;
-            default:
-                break;
-        }
-
-        // Adds the number of removed rows to the total which
-        completedRows += removedRowsCount;
-
-        // Increases the level if the amount of lines completed is larger than or equal to the current level * 10
-        if (completedRows >= 10 * level) {
-            level++;
-            moveDownSpeedSeconds *= .85f;
-        }
+//        switch (removedRowsCount) {
+//            case 1:
+//                score += calculatePoints1Row(level);
+//                break;
+//            case 2:
+//                score += calculatePoints2Rows(level);
+//                break;
+//            case 3:
+//                score += calculatePoints3Rows(level);
+//                break;
+//            case 4:
+//                score += calculatePoints4Rows(level);
+//                break;
+//            default:
+//                break;
+//        }
+//
+//        // Adds the number of removed rows to the total which
+//        completedRows += removedRowsCount;
+//
+//        // Increases the level if the amount of lines completed is larger than or equal to the current level * 10
+//        if (completedRows >= 10 * level) {
+//            level++;
+//            moveDownSpeedSeconds *= .85f;
+//        }
 //        System.out.println(level);
     }
 
