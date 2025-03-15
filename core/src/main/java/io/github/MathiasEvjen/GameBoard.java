@@ -117,12 +117,13 @@ public class GameBoard implements Screen {
     private boolean dropToBottom;
 
 
-    private Array<Integer> removeRows;
+    private Array<Integer> rowsToRemove;
     private boolean remove;
     private int removeX;
     private float removeSpeedSeconds;
     private float removeTimerSeconds;
     private boolean removedRow;
+    private int removedCount;
 
 
     public GameBoard(final Main game) {
@@ -197,7 +198,7 @@ public class GameBoard implements Screen {
 
 //        for (Sprite num : numbers) num.setSize(2, 2);
 
-        nextPieceID = MathUtils.random(0, 6);
+        nextPieceID = (int) (Math.random() * 6); //MathUtils.random(0, 6);
         holdingPiece = false;
         firstHeldPiece = true;
 
@@ -226,10 +227,10 @@ public class GameBoard implements Screen {
         level = 1;
         completedRows = 0;
 
-        removeRows = new Array<>();
+        rowsToRemove = new Array<>();
         remove = false;
         removeX = 0;
-        removeSpeedSeconds = .0001f;
+        removeSpeedSeconds = .01f;
         removedRow = false;
     }
 
@@ -276,14 +277,14 @@ public class GameBoard implements Screen {
             else if (holdingPiece) {
                 heldPieceID = currentPieceID;
                 currentPieceID = nextPieceID;
-                nextPieceID = MathUtils.random(0, 6);
+                nextPieceID = (int) (Math.random() * 6);
                 firstHeldPiece = false;
             }
 
             // Sets the current piece as next piece and creates a random next piece
             else {
                 currentPieceID = nextPieceID;
-                nextPieceID = MathUtils.random(0, 6);
+                nextPieceID = (int) (Math.random() * 6);
             }
 
             currentPieceRotation = 0;   // Resets the rotation to default
@@ -382,6 +383,7 @@ public class GameBoard implements Screen {
                 moveTimerSeconds = 0;
                 score++;
             }
+            moveDownTimerSeconds = 0;
         }
 
         // Moves piece left when the left key is pressed
@@ -405,50 +407,14 @@ public class GameBoard implements Screen {
         }
     }
 
-    private int removeY;
-    private int removedCount;
+
 
     public void logic() {
         float dt = Gdx.graphics.getDeltaTime();
 
         if (remove) {
-            if (removeX > 9) {
-                removeX = 0;
-                if (removedCount == removeRows.size-1) {
-                    removedRow = true;
-                    remove = false;
-                } else {
-                    removedCount++;
-                }
-            }
-
-            if (removeTimerSeconds > removeSpeedSeconds) {
-                // Loops through all the landed tiles on the gameBoard
-                for (int row : removeRows) {
-                    for (Sprite tile : landedTilesSprites) {
-                        // When a landed tile on that position is found it is deleted
-                        if (tile.getY()-FLOOR == row && tile.getX()-LEFT_EDGE == removeX) {
-                            landedTilesSprites.removeIndex(landedTilesSprites.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
-                            // Sets the tile slot on the gameBoard to O
-                            gameBoard[row][removeX] = "O";
-                        }
-                    }
-                }
-
-                removeTimerSeconds = 0;
-                if (removeX <= 9) removeX++;
-            }
+            removeRows();
             return;
-        }
-
-        // If a row was removed, the rest of the gameBoard is moved down to fill the now O space
-        if (removedRow) {
-            for (int i = 0; i < removeRows.size; i++) {
-                for (int y = removeRows.get(0)+1; y < gameBoard.length; y++) {
-                    moveLandedTileVertically(y);
-                }
-            }
-            removedRow = false;
         }
 
         removeCompletedRows();  // Checks for filled rows and removes them
@@ -475,6 +441,8 @@ public class GameBoard implements Screen {
             }
         }
 
+        System.out.println(currentPieceIsFalling);
+
         // If there is a piece falling, a check on whether it cannot move further down is done
         if (!dropToBottom && currentPieceIsFalling) {
             pieceLanded = false;
@@ -490,7 +458,7 @@ public class GameBoard implements Screen {
         }
 
         // If there is a piece falling it will move downwards every second
-        if (!dropToBottom && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
+        if (!dropToBottom && !pieceLanded && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
             movePieceVertically(-1);
             piecePivotCoords[1]--;
             moveDownTimerSeconds = 0;
@@ -556,7 +524,7 @@ public class GameBoard implements Screen {
 //        for (int tall : tmp) System.out.print(tall + " ");
 //        System.out.println(tmp.size);
 
-
+//        printBoard();
     }
 
 
@@ -1208,21 +1176,15 @@ public class GameBoard implements Screen {
             if ((int) fallingPieceSprites[i].getY() < lowestTile) lowestTile = (int) fallingPieceSprites[i].getY();
         }
 
-        for (Sprite sprite : fallingPieceSprites) {
-//                System.out.println(lowestTile);
-            if ((sprite.getY() != FLOOR && gameBoard[(int)sprite.getY()-FLOOR-1][(int)sprite.getX()-LEFT_EDGE].equals("X")) || sprite.getY() == FLOOR) {
-                pieceLanded = true;
-                break;
-            }
-        }
+        checkIfPieceLanded();
 
         if (pieceLanded) {
             currentPieceIsFalling = false;
             landPiece();
         } else {
             movePieceVertically(-1);
+            piecePivotCoords[1]--;
         }
-        piecePivotCoords[1]--;
     }
 
     public void movePieceLeft() {
@@ -1255,8 +1217,8 @@ public class GameBoard implements Screen {
     }
 
     private void checkIfPieceLanded() {
-        for (Sprite sprite : fallingPieceSprites) {
-            if ((sprite.getY() != FLOOR && gameBoard[(int)sprite.getY()-FLOOR-1][(int)sprite.getX()-LEFT_EDGE].equals("X")) || sprite.getY() == FLOOR) {
+        for (Sprite tile : fallingPieceSprites) {
+            if ((tile.getY() != FLOOR && gameBoard[(int)tile.getY()-FLOOR-1][(int)tile.getX()-LEFT_EDGE].equals("X")) || tile.getY() == FLOOR) {
                 pieceLanded = true;
                 break;
             }
@@ -1278,10 +1240,43 @@ public class GameBoard implements Screen {
     }
 
     // Deletes the line at the given y-position
-    private void removeRow(int y) {
-        // Loops through all x-positions in the line
-//        removeRow = y;
-        remove = true;
+    private void removeRows() {
+        if (removeX > 9) {
+            removeX = 0;
+            if (removedCount == rowsToRemove.size-1) {
+                removedRow = true;
+                remove = false;
+            } else {
+                removedCount++;
+            }
+        }
+
+        if (removeTimerSeconds > removeSpeedSeconds) {
+            // Loops through all the landed tiles on the gameBoard
+            for (int row : rowsToRemove) {
+                for (Sprite tile : landedTilesSprites) {
+                    // When a landed tile on that position is found it is deleted
+                    if (tile.getY()-FLOOR == row && tile.getX()-LEFT_EDGE == removeX) {
+                        landedTilesSprites.removeIndex(landedTilesSprites.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
+                        // Sets the tile slot on the gameBoard to O
+                        gameBoard[row][removeX] = "O";
+                    }
+                }
+            }
+
+            removeTimerSeconds = 0;
+            if (removeX <= 9) removeX++;
+        }
+
+        // If a row was removed, the rest of the gameBoard is moved down to fill the now O space
+        if (removedRow) {
+            for (int i = 0; i < rowsToRemove.size; i++) {
+                for (int y = rowsToRemove.get(0)+1; y < gameBoard.length; y++) {
+                    moveLandedTileVertically(y);
+                }
+            }
+            removedRow = false;
+        }
     }
 
     // Goes through the whole gameBoard and removes the lines that are full
@@ -1289,13 +1284,13 @@ public class GameBoard implements Screen {
 
         boolean filledRow = true;    // Holds the number of tiles filled in the row
 
-        for (int row : removeRows) {
-            removeRows.removeIndex(removeRows.indexOf(row, true));
+        for (int row : rowsToRemove) {
+            rowsToRemove.removeIndex(rowsToRemove.indexOf(row, true));
         }
 
-        removeRows = new Array<>();
+        rowsToRemove = new Array<>();
 
-        int removeRowsCount = 0;
+        int rowsToRemoveCount = 0;
 
         // Goes through all the rows of the gameBoard and checks if they are full
         for (int y = 0; y < gameBoard.length; y++) {
@@ -1309,25 +1304,25 @@ public class GameBoard implements Screen {
 
             // If all the tiles are filled, the row is removed
             if (filledRow) {
-                removeRows.add(y);
+                rowsToRemove.add(y);
 //                y--;    // Decrements y1 so the current line is checked again when all the tiles are moved one down
 //                removedRow = true;
 //                filledRow = true;    // Resets the number of filled tiles
-                removeRowsCount++;
+                rowsToRemoveCount++;
             }
             filledRow = true;
         }
 
-//        System.out.println(removeRowsCount);
+//        System.out.println(rowsToRemoveCount);
 
-        if (removeRowsCount > 0) {
+        if (rowsToRemoveCount > 0) {
             remove = true;
             removeX = 0;
             removedCount = 0;
         }
 
         // Calculates and adds points to the score total
-        switch (removeRowsCount) {
+        switch (rowsToRemoveCount) {
             case 1:
                 score += calculatePoints1Row(level);
                 break;
@@ -1345,7 +1340,7 @@ public class GameBoard implements Screen {
         }
 
         // Adds the number of removed rows to the total which
-        completedRows += removeRowsCount;
+        completedRows += rowsToRemoveCount;
 
         // Increases the level if the amount of lines completed is larger than or equal to the current level * 10
         if (completedRows >= 10 * level) {
