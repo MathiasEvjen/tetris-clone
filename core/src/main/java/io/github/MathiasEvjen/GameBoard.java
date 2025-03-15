@@ -229,7 +229,7 @@ public class GameBoard implements Screen {
         removeRows = new Array<>();
         remove = false;
         removeX = 0;
-        removeSpeedSeconds = .01f;
+        removeSpeedSeconds = .0001f;
         removedRow = false;
     }
 
@@ -412,50 +412,47 @@ public class GameBoard implements Screen {
         float dt = Gdx.graphics.getDeltaTime();
 
         if (remove) {
-            if (removeTimerSeconds > removeSpeedSeconds) {
-                if (removeX > 9) {
-                    removeX = 0;
-                    if (removedCount == removeRows.size-1) {
-                        removedRow = true;
-                    } else {
-                        removedCount++;
-                        removeY = removeRows.get(removedCount);
-                    }
+            if (removeX > 9) {
+                removeX = 0;
+                if (removedCount == removeRows.size-1) {
+                    removedRow = true;
+                    remove = false;
+                } else {
+                    removedCount++;
                 }
+            }
 
+            if (removeTimerSeconds > removeSpeedSeconds) {
                 // Loops through all the landed tiles on the gameBoard
-                for (Sprite tile : landedTilesSprites) {
-                    // When a landed tile on that position is found it is deleted
-                    if (tile.getY()-FLOOR == removeY && tile.getX()-LEFT_EDGE == removeX) {
-                        landedTilesSprites.removeIndex(landedTilesSprites.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
+                for (int row : removeRows) {
+                    for (Sprite tile : landedTilesSprites) {
+                        // When a landed tile on that position is found it is deleted
+                        if (tile.getY()-FLOOR == row && tile.getX()-LEFT_EDGE == removeX) {
+                            landedTilesSprites.removeIndex(landedTilesSprites.indexOf(tile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
+                            // Sets the tile slot on the gameBoard to O
+                            gameBoard[row][removeX] = "O";
+                        }
                     }
                 }
-                // Sets the tile slot on the gameBoard to O
-                gameBoard[removeY][removeX] = "O";
 
                 removeTimerSeconds = 0;
                 if (removeX <= 9) removeX++;
             }
-
-            // If a row was removed, the rest of the gameBoard is moved down to fill the now O space
-            if (removedRow) {
-                for (int i = 0; i < removeRows.size; i++) {
-                    for (int y = removeRows.get(0)+1; y < gameBoard.length; y++) {
-                        moveLandedTileVertically(y);
-                    }
-                }
-                remove = false;
-                removedRow = false;
-            }
             return;
+        }
+
+        // If a row was removed, the rest of the gameBoard is moved down to fill the now O space
+        if (removedRow) {
+            for (int i = 0; i < removeRows.size; i++) {
+                for (int y = removeRows.get(0)+1; y < gameBoard.length; y++) {
+                    moveLandedTileVertically(y);
+                }
+            }
+            removedRow = false;
         }
 
         removeCompletedRows();  // Checks for filled rows and removes them
 
-//        for (int y = gameBoard.length-1; y >= 0; y--) {
-//            System.out.println(Arrays.toString(gameBoard[y]));
-//        }
-//        System.out.println("");
 
         // When SPACE is pressed, the currently falling piece is fluidly moved to the bottom and landed
         if (dropToBottom) {
@@ -1326,7 +1323,6 @@ public class GameBoard implements Screen {
         if (removeRowsCount > 0) {
             remove = true;
             removeX = 0;
-            removeY = removeRows.get(0);
             removedCount = 0;
         }
 
@@ -1377,6 +1373,13 @@ public class GameBoard implements Screen {
     // Calculates and returns points when removing four rows based on the player's current level
     private int calculatePoints4Rows(int level) {
         return 1200 * (level);
+    }
+
+    private void printBoard() {
+        for (int y = gameBoard.length-1; y >= 0; y--) {
+            System.out.println(Arrays.toString(gameBoard[y]));
+        }
+        System.out.println("");
     }
 
     @Override
