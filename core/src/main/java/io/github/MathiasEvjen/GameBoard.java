@@ -1,16 +1,10 @@
 /*
     TODO
-
-    Bug:
-    Enkelte ganger droppes to brikker samtidig når man trykker space og den ene lander på feil y-pos (så langt bare kvadrat-brikken)
-
     Potensielt skrive om checkIfPieceAtEdge og se om de kan legges inn i brikkenes klasser
 
-    Fikse tiden brikker bruker på å lande
     Legge til score og level visuelt på skjermen mens man spiller
     Legge til pausefunksjonalitet
 
-    Legge til animasjon for sletting av brikker
 */
 
 package io.github.MathiasEvjen;
@@ -96,6 +90,8 @@ public class GameBoard implements Screen {
     private boolean pieceLanded;
     private boolean holdingPiece;
     private boolean firstHeldPiece;
+
+    private int highestTile;
 
     private int[] piecePivotCoords;
     private int currentPieceID;
@@ -226,6 +222,8 @@ public class GameBoard implements Screen {
         score = 0;
         level = 1;
         completedRows = 0;
+
+        highestTile = 0;
 
         rowsToRemove = new Array<>();
         remove = false;
@@ -423,9 +421,6 @@ public class GameBoard implements Screen {
             }
         }
 
-
-
-
         // When SPACE is pressed, the currently falling piece is fluidly moved to the bottom and landed
         if (dropToBottom) {
             for (Sprite tile : fallingPieceSprites) {
@@ -474,7 +469,10 @@ public class GameBoard implements Screen {
             if (tile.getY() == CEILING) {
                 game.setScreen(new GameOverScreen(game, landedTilesSprites, score));
             }
+            if (tile.getY() > highestTile) highestTile = (int)tile.getY()-FLOOR;
         }
+
+        System.out.println(highestTile);
 
         for (int i = 0; i < scoreDigits.size; i++) {
             scoreDigits.removeIndex(i);
@@ -1297,10 +1295,11 @@ public class GameBoard implements Screen {
 
         // If a row was removed, the rest of the gameBoard is moved down to fill the now O space
         if (removedRow) {
-            for (int i = 0; i < rowsToRemove.size; i++) {
-                for (int y = rowsToRemove.get(0)+1; y < gameBoard.length; y++) {
+            for (int i = rowsToRemove.size-1; i >= 0; i--) {
+                for (int y = rowsToRemove.get(i)+1; y <= highestTile; y++) {
                     moveLandedTileVertically(y);
                 }
+                highestTile--;
             }
             removedRow = false;
         }
