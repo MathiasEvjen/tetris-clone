@@ -2,7 +2,7 @@ package io.github.MathiasEvjen;
 
 import io.github.MathiasEvjen.pieces.*;
 
-public class Pieces {
+public class PiecePicker {
 
     public static int[][] getPiece(int piece, int rotation) {
         switch (piece) {
