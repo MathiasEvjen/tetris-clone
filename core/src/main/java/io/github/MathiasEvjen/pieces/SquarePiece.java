@@ -32,21 +32,11 @@ public class SquarePiece {
         }
     };
 
-    private int currentRotation = 0;
-
     public SquarePiece() {
 
     }
 
-    public int[][] getPiece() {
-        return rotations[currentRotation];
-    }
-
     public int[][] getRotation(int rotation) {
         return rotations[rotation];
-    }
-
-    public int getCurrentRotation() {
-        return this.currentRotation;
     }
 }

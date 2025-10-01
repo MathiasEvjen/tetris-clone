@@ -6,26 +6,14 @@ public class PiecePicker {
 
     public static int[][] getPiece(int piece, int rotation) {
         switch (piece) {
-            case 1:
-                if (rotation == 0) return new IPiece().getPiece();
-                return new IPiece().getRotation(rotation);
-            case 2:
-                if (rotation == 0) return new ZPiece().getPiece();
-                return new ZPiece().getRotation(rotation);
-            case 3:
-                if (rotation == 0) return new SPiece().getPiece();
-                return new SPiece().getRotation(rotation);
-            case 4:
-                if (rotation == 0) return new LPiece().getPiece();
-                return new LPiece().getRotation(rotation);
-            case 5:
-                if (rotation == 0) return new JPiece().getPiece();
-                return new JPiece().getRotation(rotation);
-            case 6:
-                if (rotation == 0) return new TPiece().getPiece();
-                return new TPiece().getRotation(rotation);
-            default:
-                return new SquarePiece().getPiece();
+            case 0: return new IPiece().getRotation(rotation);
+            case 1: return new ZPiece().getRotation(rotation);
+            case 2: return new SPiece().getRotation(rotation);
+            case 3: return new LPiece().getRotation(rotation);
+            case 4: return new JPiece().getRotation(rotation);
+            case 5: return new TPiece().getRotation(rotation);
+            case 6: return new SquarePiece().getRotation(rotation);
+            default: throw new IllegalArgumentException("Invalid piece id: " + piece);
         }
     }
 }
