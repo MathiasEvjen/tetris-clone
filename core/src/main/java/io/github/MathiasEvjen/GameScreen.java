@@ -512,8 +512,8 @@ public class GameScreen implements Screen {
     }
 
     private void createHeldPiece(int pieceID) {
-        int tiles = 0;
         int[][] hold = PiecePicker.getPiece(pieceID, 0);
+        int tiles = 0;
 
         for (int y1 = startY, y2 = 0; y1 > stopY; y1--, y2++) {
             for (int x1 = startX, x2 = 0; x1 < stopX; x1++, x2++) {
@@ -679,14 +679,14 @@ public class GameScreen implements Screen {
         if (iPieceAtWallLeft) {
             // If I-Piece is at rotation one and there is free space, the piecePivotCoords coords are moved 2 tiles to the right
             if (currentPieceRotation == 1) {
-                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
-                for (int y1 = piecePivotCoords[1] + 2, y2 = 0; y1 > piecePivotCoords[1] - 3; y1--, y2++) {
-                    for (int x1 = piecePivotCoords[0], x2 = 0; x1 < piecePivotCoords[0] + 5; x1++, x2++) {
-                        if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3)
-                            if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;    // Returns if there is not enough room to rotate
-                    }
-                }
-                piecePivotCoords[0] += 2;
+//                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+//                for (int y1 = piecePivotCoords[1] + 2, y2 = 0; y1 > piecePivotCoords[1] - 3; y1--, y2++) {
+//                    for (int x1 = piecePivotCoords[0], x2 = 0; x1 < piecePivotCoords[0] + 5; x1++, x2++) {
+//                        if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3)
+//                            if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;    // Returns if there is not enough room to rotate
+//                    }
+//                }
+//                piecePivotCoords[0] += 2;
             }
 
             // If I-Piece is at rotation three and there is free space, the piecePivotCoords coords are moved 1 tile to the right

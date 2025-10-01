@@ -210,15 +210,15 @@ public class GameLogic {
 
             // Sets the start and stop coordinates for the new piece, creates and draws it and initates that the piece is falling
             setStartAndStopCoordsCurrentPiece(currentPieceID);
-            createNewPiece(currentPieceID, currentPieceRotation);
+            fallingPiece = createNewFallingPiece(currentPieceID, currentPieceRotation);
             currentPieceIsFalling = true;
 
             // Sets the start and stop coordinates for the next piece and creates and draws it
             setStartAndStopCoordsNextPiece(nextPieceID);
-            createNextPiece(nextPieceID);
+            nextPiece = createSpecificPiece(nextPieceID);
 
             // Sets the start and stop coordinates for the ghost piece and creates and draws it
-            createGhostPiece(currentPieceID);
+            ghostPiece = createGhostPiece(currentPieceID);
         }
     }
 
@@ -227,6 +227,28 @@ public class GameLogic {
         moveDownTimerSeconds += dt;
         animationTimer += dt;
         removeTimerSeconds += dt;
+    }
+
+    private void updateFallingPiece(float dt) {
+        // Moves the falling piece smoothly downards
+        // Stops when the piece hits the bottom
+        if (dropToBottom) {
+            clearFallingPieceOnBoard();
+            movePieceToBottom(dt);
+            handlePieceLanding();
+        }
+
+        // Check if piece is at bottom
+        if (!dropToBottom && currentPieceIsFalling) {
+            checkIfPieceAtBottom();
+        }
+
+        // If there is a piece falling it will move downwards every second
+        if (!dropToBottom && !pieceLanded && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
+            movePieceVertically(-1);
+        }
+
+        handleHighestTile();
     }
 
 
@@ -265,69 +287,54 @@ public class GameLogic {
         firstHeldPiece = false;
     }
 
-    private void createNewPiece(int currentPieceID, int rotation) {
-        int[][] newPiece = PiecePicker.getPiece(currentPieceID, rotation);   // Creates a piece from currentPieceID
+    private Piece createNewFallingPiece(int currentPieceID, int rotation) {
+        int[][] randomPiece = PiecePicker.getPiece(currentPieceID, rotation);   // Creates a piece from currentPieceID
         int tile = 0;
 
-        fallingPiece = new Piece(currentPieceID, rotation);
-
-        System.out.println("Current piece: " + currentPieceID);
+        Piece newPiece = new Piece(currentPieceID, rotation);
 
         for (int y1 = startY, y2 = 0; y1 > stopY; y1--, y2++) {
             for (int x1 = startX, x2 = 0; x1 < stopX; x1++, x2++) {
-                if (newPiece[y2][x2] != 0 && newPiece[y2][x2] != 3) {
-                    fallingPiece.addTile(x1, y1, tile);
+                if (randomPiece[y2][x2] != 0 && randomPiece[y2][x2] != 3) {
+                    newPiece.addTile(x1, y1, tile);
                     gameBoard[y1-FLOOR][x1-LEFT_EDGE] = 'F';
                     tile++;
                 }
-                if (newPiece[y2][x2] == 2 || newPiece[y2][x2] == 3) {
-                    fallingPiece.setPivotCoords(x1, y1);
+                if (randomPiece[y2][x2] == 2 || randomPiece[y2][x2] == 3) {
+                    newPiece.setPivotCoords(x1, y1);
                 }
             }
         }
+        return newPiece;
     }
 
-    private void createNextPiece(int nextPieceID) {
-        int[][] next = PiecePicker.getPiece(nextPieceID, 0);
+    private Piece createSpecificPiece(int pieceID) {
+        int[][] pickedPiece = PiecePicker.getPiece(pieceID, 0);
         int tile = 0;
 
-        nextPiece = new Piece(nextPieceID, 0);
+        Piece createdPiece = new Piece(pieceID, 0);
 
         for (int y1 = startY, y2 = 0; y1 > stopY; y1--, y2++) {
             for (int x1 = startX, x2 = 0; x1 < stopX; x1++, x2++) {
-                if (next[y2][x2] != 0 && next[y2][x2] != 3) {
-                    nextPiece.addTile(x1, y1, tile);
+                if (pickedPiece[y2][x2] != 0 && pickedPiece[y2][x2] != 3) {
+                    createdPiece.addTile(x1, y1, tile);
                     tile++;
                 }
             }
         }
+        return createdPiece;
     }
 
-    private void createHeldPiece(int pieceID) {
-        int[][] hold = PiecePicker.getPiece(pieceID, 0);
-        int tile = 0;
-
-        heldPiece = new Piece(pieceID, 0);
-
-        for (int y1 = startY, y2 = 0; y1 > stopY; y1--, y2++) {
-            for (int x1 = startX, x2 = 0; x1 < stopX; x1++, x2++) {
-                if (hold[y2][x2] != 0 && hold[y2][x2] != 3) {
-                    heldPiece.addTile(x1, y1, tile);
-                    tile++;
-                }
-            }
-        }
-    }
-
-    private void createGhostPiece(int currentPieceID) {
+    private Piece createGhostPiece(int currentPieceID) {
         int lowestFallingTileY = findLowestFallingTileY();
         int distanceToBottom = findDistanceToBottom(lowestFallingTileY);
 
-        ghostPiece = new Piece(currentPieceID);
+        Piece createdGhostPiece = new Piece(currentPieceID);
 
         for (int tile = 0; tile < fallingPiece.length(); tile++) {
             ghostPiece.addTile(fallingPiece.getX(tile), fallingPiece.getY(tile) - distanceToBottom, tile);
         }
+        return createdGhostPiece;
     }
 
     private CreatePieceBoundaries calculatePieceBoundaries(int currentPieceID, int edge) {
@@ -384,6 +391,38 @@ public class GameLogic {
 
     /* ------------------------------ */
     /*                                */
+    /*         Input handling         */
+    /*                                */
+    /* ------------------------------ */
+
+    public void dropFallingPiece() {
+        dropToBottom = true;
+    }
+
+    public void rotateClockwise() {
+        if (currentPieceIsFalling) {
+            if (pieceLanded) moveDownTimerSeconds = 0;
+
+            // Checks if the current piece is at an edge and needs to be moved out to rotate
+            checkIfPiecesAtEdge();
+
+            // Updates the currently falling piece's rotation
+            if (currentPieceRotation == 3) currentPieceRotation = 0;
+            else currentPieceRotation++;
+
+            // Creates an array of the coordinates of the next rotation of the currently falling piece
+            int[] newRotationCoords = createRotatedCoords(currentPieceID, currentPieceRotation);
+            if (newRotationCoords[0] == 99) return; // Aborts rotation if the first index of the coords is 99
+
+            // Goes through the tiles of the falling piece and the newRotation coordinates and updates the tiles of the falling piece to the new coordinates
+            updateFallingPieceCoords(newRotationCoords);
+        }
+    }
+
+
+
+    /* ------------------------------ */
+    /*                                */
     /*     Movement and landing       */
     /*                                */
     /* ------------------------------ */
@@ -414,28 +453,6 @@ public class GameLogic {
             };
 
         }
-    }
-
-    private void updateFallingPiece(float dt) {
-        // Moves the falling piece smoothly downards
-        // Stops when the piece hits the bottom
-        if (dropToBottom) {
-            clearFallingPieceOnBoard();
-            movePieceToBottom(dt);
-            handlePieceLanding();
-        }
-
-        // Check if piece is at bottom
-        if (!dropToBottom && currentPieceIsFalling) {
-            checkIfPieceAtBottom();
-        }
-
-        // If there is a piece falling it will move downwards every second
-        if (!dropToBottom && !pieceLanded && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
-            movePieceVertically(-1);
-        }
-
-        handleHighestTile();
     }
 
     private void movePieceVertically(int distance) {
@@ -538,6 +555,500 @@ public class GameLogic {
         if (pieceLanded && moveDownTimerSeconds > landTimeSeconds) {
             landCurrentFallingPiece();    // Lands the current tile
         }
+    }
+
+
+
+    /* ------------------------------ */
+    /*                                */
+    /*  Collision and edge detection  */
+    /*                                */
+    /* ------------------------------ */
+
+    private void checkIfPiecesAtEdge() {
+        switch (currentPieceID) {
+            case 0:
+                handleIPieceAtWall();
+                break;
+            case 1:
+                zPieceAtEdge();
+                break;
+            case 2:
+                sPieceAtEdge();
+                break;
+            case 3:
+                lPieceAtEdge();
+                break;
+            case 4:
+                jPieceAtEdge();
+                break;
+            case 6:
+                tPieceAtEdge();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void handleIPieceAtWall() {
+        // Checks if an I-Piece is at a left or right wall
+        boolean iPieceAtWallLeft = checkIfIPieceAtWallLeft();
+        boolean iPieceAtWallRight = checkIfIPieceAtWallRight();
+        boolean iPieceAtFloor = checkIfIPieceAtFloor();
+
+        // If I-Piece is at a left wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (iPieceAtWallLeft) {
+            shiftIPieceFromLeftWall();
+        }
+
+        // If I-Piece is at a right wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (iPieceAtWallRight) {
+            shiftIPieceFromRightWall();
+        }
+
+        if (iPieceAtFloor) {
+            shiftIPieceFromFloor();
+        }
+    }
+
+    public void zPieceAtEdge() {
+        boolean zPieceAtWallLeft = false;
+        boolean zPieceAtWallRight = false;
+        boolean zPieceAtCeiling = false;
+        boolean zPieceAtFloor = false;
+
+        // Checks if a Z-Piece is at a wall, ceiling or floor
+        if (currentPieceID == 1) {
+            int zPieceAtWallLeftCounter = 0;
+            int zPieceAtWallRightCounter = 0;
+            int zPieceAtCeilingCounter = 0;
+            int zPieceAtFloorCounter = 0;
+            for (Sprite tile : fallingPieceTiles) {
+                if (tile.getX() == LEFT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE-1] == 'X') zPieceAtWallLeftCounter++;
+                if (tile.getX() == RIGHT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE+1] == 'X') zPieceAtWallRightCounter++;
+                if (tile.getY() == CEILING || gameBoard[(int)tile.getY()-FLOOR+1][(int)tile.getX()-LEFT_EDGE] == 'X') zPieceAtCeilingCounter++;
+                if (tile.getY() == FLOOR || gameBoard[(int)tile.getY()-FLOOR-1][(int)tile.getX()-LEFT_EDGE] == 'X') zPieceAtFloorCounter++;
+            }
+            if (zPieceAtWallLeftCounter >= 1) zPieceAtWallLeft = true;
+            if (zPieceAtWallRightCounter >= 1) zPieceAtWallRight = true;
+            if (zPieceAtCeilingCounter == 2) zPieceAtCeiling = true;
+            if (zPieceAtFloorCounter == 2) zPieceAtFloor = true;
+        }
+
+        // If Z-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (zPieceAtWallLeft) {
+            // If Z-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the right
+            if (currentPieceID == 1 && currentPieceRotation == 3) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+                movePieceOutFromLeftWall(nextRotation);
+            }
+        }
+
+        // If Z-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (zPieceAtWallRight) {
+            // If Z-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the left
+            if (currentPieceID == 1 && currentPieceRotation == 1) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+                movePieceOutFromRightWall(nextRotation);
+            }
+        }
+
+        // If Z-Piece is at the ceiling and there is free space, the piecePivotCoords coords are moved down from the ceiling so it can rotate
+        if (zPieceAtCeiling) {
+            if (currentPieceID == 1 && currentPieceRotation == 0) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 1);
+                movePieceOutFromCeiling(nextRotation);
+            }
+        }
+
+        // If Z-Piece is at the floor and there is free sace, the piecePivotCoords coords are moved up from the floor so it can rotate
+        if (zPieceAtFloor) {
+            if (currentPieceID == 1 && currentPieceRotation == 2) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 3);
+                movePieceOutFromFloor(nextRotation);
+            }
+        }
+    }
+
+    public void sPieceAtEdge() {
+        boolean sPieceAtWallLeft = false;
+        boolean sPieceAtWallRight = false;
+        boolean sPieceAtCeiling = false;
+        boolean sPieceAtFloor = false;
+
+        // Checks if an S-Piece is at a wall, ceiling or floor
+        if (currentPieceID == 2) {
+            int sPieceAtWallLeftCounter = 0;
+            int sPieceAtWallRightCounter = 0;
+            int sPieceAtCeilingCounter = 0;
+            int sPieceAtFloorCounter = 0;
+            for (Sprite tile : fallingPieceTiles) {
+                if (tile.getX() == LEFT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE-1] == 'X') sPieceAtWallLeftCounter++;
+                if (tile.getX() == RIGHT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE+1] == 'X') sPieceAtWallRightCounter++;
+                if (tile.getY() == CEILING || gameBoard[(int)tile.getY()-FLOOR+1][(int)tile.getX()-LEFT_EDGE] == 'X') sPieceAtCeilingCounter++;
+                if (tile.getY() == FLOOR || gameBoard[(int)tile.getY()-FLOOR-1][(int)tile.getX()-LEFT_EDGE] == 'X') sPieceAtFloorCounter++;
+            }
+            if (sPieceAtWallLeftCounter >= 1) sPieceAtWallLeft = true;
+            if (sPieceAtWallRightCounter >= 1) sPieceAtWallRight = true;
+            if (sPieceAtCeilingCounter == 2) sPieceAtCeiling = true;
+            if (sPieceAtFloorCounter == 2) sPieceAtFloor = true;
+        }
+
+        // If S-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (sPieceAtWallLeft) {
+            // If S-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the right
+            if (currentPieceID == 2 && currentPieceRotation == 3) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+                movePieceOutFromLeftWall(nextRotation);
+            }
+        }
+
+        // If S-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (sPieceAtWallRight) {
+            // If S-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the left
+            if (currentPieceID == 2 && currentPieceRotation == 1) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+                movePieceOutFromRightWall(nextRotation);
+            }
+        }
+
+        // If S-Piece is at the ceiling and there is free space, the piecePivotCoords coords are moved down from the ceiling so it can rotate
+        if (sPieceAtCeiling) {
+            if (currentPieceID == 2 && currentPieceRotation == 0) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 1);
+                movePieceOutFromCeiling(nextRotation);
+            }
+        }
+
+        // If S-Piece is at the floor and there is free space, the piecePivotCoords coords are moved up from the floor so it can rotate
+        if (sPieceAtFloor) {
+            if (currentPieceID == 2 && currentPieceRotation == 2) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 3);
+                movePieceOutFromFloor(nextRotation);
+            }
+        }
+    }
+
+    public void lPieceAtEdge() {
+        boolean lPieceAtWallLeft = false;
+        boolean lPieceAtWallRight = false;
+        boolean lPieceAtFloor = false;
+
+        // Checks if an L-Piece is at a wall
+        if (currentPieceID == 3) {
+            int lPieceAtWallLeftCounter = 0;
+            int lPieceAtWallRightCounter = 0;
+            int lPieceAtFloorCounter = 0;
+            for (Sprite tile : fallingPieceTiles) {
+                if (tile.getX() == LEFT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE-1] == 'X') lPieceAtWallLeftCounter++;
+                if (tile.getX() == RIGHT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE+1] == 'X') lPieceAtWallRightCounter++;
+                if (tile.getY() == FLOOR || gameBoard[(int)tile.getY()-FLOOR-1][(int)tile.getX()-LEFT_EDGE] == 'X') lPieceAtFloorCounter++;
+            }
+            if (lPieceAtWallLeftCounter >= 2) lPieceAtWallLeft = true;
+            if (lPieceAtWallRightCounter >= 2) lPieceAtWallRight = true;
+            if (lPieceAtFloorCounter >= 2) lPieceAtFloor = true;
+        }
+
+        // If L-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (lPieceAtWallLeft) {
+            // If L-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the right
+            if (currentPieceID == 3 && currentPieceRotation == 1) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+                movePieceOutFromLeftWall(nextRotation);
+            }
+        }
+
+        // If L-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (lPieceAtWallRight) {
+            // If L-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the left
+            if (currentPieceID == 3 && currentPieceRotation == 3) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+                movePieceOutFromRightWall(nextRotation);
+            }
+        }
+
+        // If L-Piece is at the floor and there is free space, the piecePivotCoords coords are moved up from the floor so it can rotate
+        if (lPieceAtFloor) {
+            if (currentPieceID == 3 && currentPieceRotation == 0) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 1);
+                movePieceOutFromFloor(nextRotation);
+            }
+        }
+    }
+
+    public void jPieceAtEdge() {
+        boolean jPieceAtWallLeft = false;
+        boolean jPieceAtWallRight = false;
+        boolean jPieceAtFloor = false;
+
+        // Checks if a J-Piece is at a wall
+        if (currentPieceID == 4) {
+            int jPieceAtWallLeftCounter = 0;
+            int jPieceAtWallRightCounter = 0;
+            int jPieceAtFloorCounter = 0;
+            for (Sprite tile : fallingPieceTiles) {
+                if (tile.getX() == LEFT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE-1] == 'X') jPieceAtWallLeftCounter++;
+                if (tile.getX() == RIGHT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE+1] == 'X') jPieceAtWallRightCounter++;
+                if (tile.getY() == FLOOR || gameBoard[(int)tile.getY()-FLOOR-1][(int)tile.getX()-LEFT_EDGE] == 'X') jPieceAtFloorCounter++;
+            }
+            if (jPieceAtWallLeftCounter >= 2) jPieceAtWallLeft = true;
+            if (jPieceAtWallRightCounter >= 2) jPieceAtWallRight = true;
+            if (jPieceAtFloorCounter >= 2) jPieceAtFloor = true;
+        }
+
+        // If J-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (jPieceAtWallLeft) {
+            // If J-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the right
+            if (currentPieceID == 4 && currentPieceRotation == 1) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+                movePieceOutFromLeftWall(nextRotation);
+            }
+        }
+
+        // If J-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (jPieceAtWallRight) {
+            // If J-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the left
+            if (currentPieceID == 4 && currentPieceRotation == 3) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+                movePieceOutFromRightWall(nextRotation);
+            }
+        }
+
+        // If J-Piece is at the floor and there is free space, the piecePivotCoords coords are moved up from the floor so it can rotate
+        if (jPieceAtFloor) {
+            if (currentPieceID == 4 && currentPieceRotation == 0) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 1);
+                movePieceOutFromFloor(nextRotation);
+            }
+        }
+    }
+
+    public void tPieceAtEdge() {
+        boolean tPieceAtWallLeft = false;
+        boolean tPieceAtWallRight = false;
+        boolean tPieceAtFloor = false;
+
+        // Checks if a T-Piece is at a wall
+        if (currentPieceID == 6) {
+            int tPieceAtWallLeftCounter = 0;
+            int tPieceAtWallRightCounter = 0;
+            int tPieceAtFloorCounter = 0;
+            for (Sprite tile : fallingPieceTiles) {
+                if (tile.getX() == LEFT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE-1] == 'X') tPieceAtWallLeftCounter++;
+                if (tile.getX() == RIGHT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE+1] == 'X') tPieceAtWallRightCounter++;
+                if (tile.getY() == FLOOR || gameBoard[(int)tile.getY()-FLOOR-1][(int)tile.getX()-LEFT_EDGE] == 'X') tPieceAtFloorCounter++;
+            }
+            if (tPieceAtWallLeftCounter >= 2) tPieceAtWallLeft = true;
+            if (tPieceAtWallRightCounter >= 2) tPieceAtWallRight = true;
+            if (tPieceAtFloorCounter >= 2) tPieceAtFloor = true;
+        }
+
+        // If T-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (tPieceAtWallLeft) {
+            // If T-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the right
+            if (currentPieceID == 6 && currentPieceRotation == 1) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+                movePieceOutFromLeftWall(nextRotation);
+            }
+        }
+
+        // If T-Piece is at the wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
+        if (tPieceAtWallRight) {
+            // If T-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved one tile to the left
+            if (currentPieceID == 6 && currentPieceRotation == 3) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+                movePieceOutFromRightWall(nextRotation);
+            }
+        }
+
+        // If T-Piece is at the floor and there is free space, the piecePivotCoords coords are moved up from the floor so it can rotate
+        if (tPieceAtFloor) {
+            if (currentPieceID == 6 && currentPieceRotation == 0) {
+                int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 1);
+                movePieceOutFromFloor(nextRotation);
+            }
+        }
+    }
+
+
+    private boolean checkIfIPieceAtWallLeft() {
+        int iPieceAtWallLeftCounter = 0;
+        for (int tile = 0; tile < fallingPiece.length(); tile++) {
+            if (fallingPiece.getX(tile) == LEFT_EDGE ||
+                gameBoard[(int)fallingPiece.getY(tile)][(int)fallingPiece.getX(tile)-LEFT_EDGE-1] == 'X') {
+                    iPieceAtWallLeftCounter++;
+                    if (iPieceAtWallLeftCounter == 2) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean checkIfIPieceAtWallRight() {
+        int iPieceAtWallRightCounter = 0;
+        for (int tile = 0; tile < fallingPiece.length(); tile++) {
+            if (fallingPiece.getX(tile) == RIGHT_EDGE ||
+                gameBoard[(int)fallingPiece.getY(tile) - FLOOR][(int)fallingPiece.getX(tile) - LEFT_EDGE + 1] == 'X') {
+                    iPieceAtWallRightCounter++;
+                    if (iPieceAtWallRightCounter == 2) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean checkIfIPieceAtFloor() {
+        int iPieceAtFloorCounter = 0;
+        for (int tile = 0; tile < fallingPiece.length(); tile++) {
+            if (fallingPiece.getY(tile) == FLOOR || gameBoard[(int)fallingPiece.getY(tile) - FLOOR - 1][(int)fallingPiece.getX(tile) - LEFT_EDGE] == 'X')
+                iPieceAtFloorCounter++;
+        }
+        return iPieceAtFloorCounter >= 2;
+    }
+
+
+    private void shiftIPieceFromLeftWall() {
+        // If I-Piece is at rotation one and there is free space, the piecePivotCoords coords are moved 2 tiles to the right
+        if (currentPieceRotation == 1) shiftIPieceRotationOneRight();
+
+        // If I-Piece is at rotation three and there is free space, the piecePivotCoords coords are moved 1 tile to the right
+        if (currentPieceRotation == 3) shiftIPieceRotationThreeRight();
+    }
+
+    private void shiftIPieceRotationOneRight() {
+        int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+        for (int y1 = piecePivotCoords[1] + 2, y2 = 0; y1 > piecePivotCoords[1] - 3; y1--, y2++) {
+            for (int x1 = piecePivotCoords[0], x2 = 0; x1 < piecePivotCoords[0] + 5; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3)
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;    // Returns if there is not enough room to rotate
+            }
+        }
+        piecePivotCoords[0] += 2;
+        fallingPiece.translatePivotX(2);
+    }
+
+    private void shiftIPieceRotationThreeRight() {
+        int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+        movePieceOutFromLeftWall(nextRotation);
+    }
+
+
+    private void shiftIPieceFromRightWall() {
+        // If I-Piece is at rotation 1 and there is free space, the piecePivotCoords coords are moved 1 til to the left
+        if (currentPieceRotation == 1) shiftIPieceRotationOneLeft();
+
+        // If I-Piece is at rotation 3 and there is free space, the piecePivotCoords coords are moved 2 tiles to the left
+        if (currentPieceRotation == 3) shiftIPieceRotationThreeLeft();
+    }
+
+    private void shiftIPieceRotationOneLeft() {
+        int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 2);
+        movePieceOutFromRightWall(nextRotation);
+    }
+
+    private void shiftIPieceRotationThreeLeft() {
+        int[][] nextRotation = PiecePicker.getPiece(currentPieceID, 0);
+        for (int y1 = fallingPiece.pivotCoords.y + 2, y2 = 0; y1 > fallingPiece.pivotCoords.y - 3; y1--, y2++) {
+            for (int x1 = fallingPiece.pivotCoords.x - 4, x2 = 0; x1 < fallingPiece.pivotCoords.x + 1; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3)
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;
+            }
+        }
+        fallingPiece.translatePivotX(-2);
+    }
+
+
+    private void shiftIPieceFromFloor() {
+        if (currentPieceRotation == 0) {
+            shiftIPieceRotationZeroFloor();
+        }
+
+        if (currentPieceRotation == 2) {
+            shiftIPieceRotationTwoFloor();
+        }
+    }
+
+    private void shiftIPieceRotationZeroFloor() {
+        int[][] nextRotation = PiecePicker.getPiece(currentPieceID, currentPieceRotation + 1);
+        for (int y1 = fallingPiece.pivotCoords.y + 4, y2 = 0; y1 > fallingPiece.pivotCoords.y - 1; y1--, y2++) {
+            for (int x1 = fallingPiece.pivotCoords.x - 2, x2 = 0; x1 < fallingPiece.pivotCoords.x + 3; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3) {
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;
+                }
+            }
+        }
+        fallingPiece.translatePivotY(2);
+    }
+
+    private void shiftIPieceRotationTwoFloor() {
+        int[][] nextRotation = PiecePicker.getPiece(currentPieceID, currentPieceRotation + 1);
+        movePieceOutFromFloor(nextRotation);
+    }
+
+
+
+    
+
+    // TODO: Design abstract method for rotations
+    private void wallKickIPiece(int[][] nextRotation, int deltaX, int deltaY) {
+        for (int y = 0; y < nextRotation.length; y++) {
+            for (int x = 0; x < nextRotation[0].length; x++) {
+                if (nextRotation[y][x] != 0 && nextRotation[y][x] != 3) {
+                    int newX = fallingPiece.pivotCoords.x + (x - ) + deltaX;
+                    int newY = fallingPiece.pivotCoords.y + y + deltaY;
+                    if (newX < LEFT_EDGE || newX > RIGHT_EDGE || newY < FLOOR || newY > CEILING ||
+                        gameBoard[newY-FLOOR][newX-LEFT_EDGE] == 'X') return;
+                }
+            }
+        }
+        fallingPiece.translatePivotX(deltaX);
+        fallingPiece.translatePivotY(deltaY);
+    }
+
+
+
+
+
+
+
+    public void movePieceOutFromLeftWall(int[][] nextRotation) {
+        for (int y1 = piecePivotCoords[1] + 2, y2 = 0; y1 > piecePivotCoords[1] - 3; y1--, y2++) {
+            for (int x1 = piecePivotCoords[0] - 1, x2 = 0; x1 < piecePivotCoords[0] + 4; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3)
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;
+            }
+        }
+        piecePivotCoords[0]++;
+    }
+
+    public void movePieceOutFromRightWall(int[][] nextRotation) {
+        for (int y1 = piecePivotCoords[1] + 2, y2 = 0; y1 > piecePivotCoords[1] - 3; y1--, y2++) {
+            for (int x1 = piecePivotCoords[0] - 3, x2 = 0; x1 < piecePivotCoords[0] + 2; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3)
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;
+            }
+        }
+        piecePivotCoords[0]--;
+    }
+
+    public void movePieceOutFromCeiling(int[][] nextRotation) {
+        for (int y1 = piecePivotCoords[1] + 1, y2 = 0; y1 > piecePivotCoords[1] - 4; y1--, y2++) {
+            for (int x1 = piecePivotCoords[0] - 2, x2 = 0; x1 < piecePivotCoords[0] + 3; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3) {
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;
+                }
+            }
+        }
+        piecePivotCoords[1]--;
+    }
+
+    public void movePieceOutFromFloor(int[][] nextRotation) {
+        for (int y1 = piecePivotCoords[1] + 3, y2 = 0; y1 > piecePivotCoords[1] - 2; y1--, y2++) {
+            for (int x1 = piecePivotCoords[0] - 2, x2 = 0; x1 < piecePivotCoords[0] + 3; x1++, x2++) {
+                if (nextRotation[y2][x2] != 0 && nextRotation[y2][x2] != 3) {
+                    if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') return;
+                }
+            }
+        }
+        piecePivotCoords[1]++;
     }
 
 
