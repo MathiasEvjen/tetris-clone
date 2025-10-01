@@ -22,8 +22,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.util.Arrays;
 
-public class GameBoard implements Screen {
+public class GameScreen implements Screen {
     final Main game;
+    final GameLogic gameLogic;
 
     private final char[][] gameBoard;
     private record CreatePieceBoundaries(int startX, int startY, int stopX, int stopY) {}
@@ -123,7 +124,7 @@ public class GameBoard implements Screen {
     private int removedCount;
 
 
-    public GameBoard(final Main game) {
+    public GameScreen(final Main game) {
         this.game = game;
 
         // Initiates background texture
@@ -231,6 +232,8 @@ public class GameBoard implements Screen {
         removeX = 0;
         removeSpeedSeconds = .01f;
         removedRow = false;
+
+        gameLogic = new GameLogic(gameBoard, game);
     }
 
     @Override
@@ -246,6 +249,7 @@ public class GameBoard implements Screen {
         animationTimer += dt;
         removeTimerSeconds += dt;
         input();
+        gameLogic.update(dt);
         logic();
         draw();
     }
@@ -262,6 +266,11 @@ public class GameBoard implements Screen {
 
         game.batch.draw(background, 0, 0, worldWidth, worldHeight);
 
+
+        /* TODO: Change this to pure visual with no logic
+                 Will collect the coordinates from logic
+                 and use them to draw the tiles
+        */
         // Creates a new piece at the top if there is no current piece falling
         if (!currentPieceIsFalling) {
             // If a piece was just held, the held piece is set as the falling piece and the falling piece is set as the held piece
@@ -412,84 +421,6 @@ public class GameBoard implements Screen {
     public void logic() {
         float dt = Gdx.graphics.getDeltaTime();
 
-        // Updates the location of ghost piece
-        if (fallingPieceTiles[0] != null && !dropToBottom) {
-            int lowestFallingTileY = findLowestFallingTileY();  // Finds the Y coordinate of the lowest tile of the falling piece
-            findDistanceToBottom(lowestFallingTileY);   // Calculates the distance to the bottom of the lowest tile
-
-            // Updates X coordinates of the ghost piece to be the same as the falling piece
-            // Updates Y coordinates to be the height of the falling piece - its distance to the bottom
-            for (int i = 0; i < ghostPieceTiles.length; i++) {
-                ghostPieceTiles[i].setX(fallingPieceTiles[i].getX());
-                ghostPieceTiles[i].setY(fallingPieceTiles[i].getY() - distanceToBottom);
-            }
-        }
-
-        // Moves the falling piece smoothly downards
-        // Stops when the piece hits the bottom
-        if (dropToBottom) {
-
-            // Sets the current positions of the falling piece to empty on the gameboard
-            for (Sprite tile : fallingPieceTiles) {
-                gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE] = '0';
-            }
-
-            // Fluidly moves the tiles of the falling piece downward
-            for (int i = 0; i < fallingPieceTiles.length; i++) {
-                // Updates the Y coordinates of the tiles every fram
-                fallingPieceTiles[i].translateY(animationSpeed * dt);
-
-                // Checks if the lowest tile of the falling piece is at or below the floor or at or below
-                // the current position of the lowest ghost piece tile
-                if (findLowestFallingTileY() <= FLOOR || fallingPieceTiles[i].getY() <= ghostPieceTiles[i].getY()) {
-                    // Sets the falling piece tile positions equal to the position of their ghost piece counterparts
-                    for (int t = 0; t < fallingPieceTiles.length; t++) {
-                        fallingPieceTiles[t].setY(ghostPieceTiles[t].getY());
-                    }
-
-                    // Stops tile from dropping and lands the piece
-                    dropToBottom = false;
-                    landPiece();
-                    break;
-                };
-
-            }
-        }
-
-
-        // If there is a piece falling, a check on whether it cannot move further down is done
-        if (!dropToBottom && currentPieceIsFalling) {
-            pieceLanded = false;
-
-            // Checks the tiles to see if the tile directly under it is either filled or the bottom of the gameBoard
-            // Sets the piece as landed if either criteria is met
-            checkIfPieceLanded();
-
-            // If the piece cannot move down it will be stored in the landedTilesSprites array
-            if (pieceLanded && moveDownTimerSeconds > landTimeSeconds) {
-                landPiece();    // Lands the current tile
-            }
-        }
-
-        // If there is a piece falling it will move downwards every second
-        if (!dropToBottom && !pieceLanded && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
-            movePieceVertically(-1);
-            piecePivotCoords[1]--;
-            moveDownTimerSeconds = 0;
-        }
-
-        // Loops over all landed tiles and checks if one of them is at ceiling height
-        for (Sprite tile : landedTilesTiles) {
-            if (tile.getY() == CEILING) {
-                // Switches to game over screen once a tile hits the ceiling
-                game.setScreen(new GameOverScreen(game, landedTilesTiles, score));
-            }
-
-            // Updates the current highest tile
-            if (tile.getY() > highestTile) highestTile = (int)tile.getY()-FLOOR;
-        }
-
-
         // TODO: Score is a disaster and needs work
         for (int i = 0; i < scoreDigits.size; i++) {
             scoreDigits.removeIndex(i);
@@ -527,14 +458,6 @@ public class GameBoard implements Screen {
             scoreDigits.get(i).setX(14 - (2 * i));
             scoreDigits.get(i).setY(22);
         }
-
-
-        if (remove) {
-            removeRows();
-            return;
-        }
-
-        removeCompletedRows();  // Checks for filled rows and removes them
 
 //        System.out.println("Digits:" + scoreDigits.size);
 //        System.out.println("Score:" + score);
@@ -666,7 +589,6 @@ public class GameBoard implements Screen {
             gameBoard[(int)fallingPieceTiles[tile].getY()-FLOOR][(int)fallingPieceTiles[tile].getX()-LEFT_EDGE] = 'F';  // Sets the new positions on the gameBoard as falling
         }
     }
-
 
     private int[] createRotatedCoords(int pieceID, int rotation) {
         int[][] piece = PiecePicker.getPiece(currentPieceID, currentPieceRotation);
@@ -1146,7 +1068,6 @@ public class GameBoard implements Screen {
     }
 
 
-    // TODO: Move method to logic-file
     // Should return distance to bottom
     private void findDistanceToBottom(int lowestFallingTileY) {
         int distance = 0;
@@ -1293,7 +1214,7 @@ public class GameBoard implements Screen {
 
         int rowsToRemoveCount = 0;
 
-        // Goes through all the rows of the gameBoard and checks if they are full
+        // Goes through all the rows of the gameBoard
         for (int y = 0; y < gameBoard.length; y++) {
             // Checks all the tiles in the row if they are full
             for (int x = 0; x < gameBoard[y].length; x++) {
@@ -1398,6 +1319,8 @@ public class GameBoard implements Screen {
         stopY = pieceBoundaries.stopY();
     }
 
+
+    // TODO: More handling of points
     // Calculates and returns points when removing one row based on the player's current level
     private int calculatePoints1Row(int level) {
         return 100 * (level);
