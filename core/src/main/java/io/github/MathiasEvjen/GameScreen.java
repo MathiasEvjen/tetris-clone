@@ -26,6 +26,7 @@ public class GameScreen implements Screen {
     final Main game;
     final GameLogic gameLogic;
     final InputHandler inputHandler;
+    final Renderer renderer;
 
     private final char[][] gameBoard;
     private record CreatePieceBoundaries(int startX, int startY, int stopX, int stopY) {}
@@ -195,45 +196,46 @@ public class GameScreen implements Screen {
 
 //        for (Sprite num : numbers) num.setSize(2, 2);
 
-        nextPieceID = (int) (Math.random() * 6); //MathUtils.random(0, 6);
-        holdingPiece = false;
-        firstHeldPiece = true;
-
-        fallingPieceTiles = new Sprite[4];
-        nextPieceIDSprites = new Sprite[4];
-        heldPieceTiles = new Sprite[4];
-        ghostPieceTiles = new Sprite[4];
-
-        moveSpeedSeconds = .1175f;
-        moveDownSpeedSeconds = 1f;   // Defines the dropspeed of the pieces
-        landTimeSeconds = .8f;
-
-        animationSpeed = -300f;
-        dropToBottom = false;
-
-        piecePivotCoords = new int[2];
-
-        landedTilesTiles = new Array<>();
+//        nextPieceID = (int) (Math.random() * 6); //MathUtils.random(0, 6);
+//        holdingPiece = false;
+//        firstHeldPiece = true;
+//
+//        fallingPieceTiles = new Sprite[4];
+//        nextPieceIDSprites = new Sprite[4];
+//        heldPieceTiles = new Sprite[4];
+//        ghostPieceTiles = new Sprite[4];
+//
+//        moveSpeedSeconds = .1175f;
+//        moveDownSpeedSeconds = 1f;   // Defines the dropspeed of the pieces
+//        landTimeSeconds = .8f;
+//
+//        animationSpeed = -300f;
+//        dropToBottom = false;
+//
+//        piecePivotCoords = new int[2];
+//
+//        landedTilesTiles = new Array<>();
 
         gameBoard = new char[20][10];
         for (char[] tile : gameBoard) {
             Arrays.fill(tile, 'O');
         }
 
-        score = 0;
-        level = 1;
-        completedRows = 0;
+//        score = 0;
+//        level = 1;
+//        completedRows = 0;
+//
+//        highestTile = 0;
+//
+//        rowsToRemove = new Array<>();
+//        remove = false;
+//        removeX = 0;
+//        removeSpeedSeconds = .01f;
+//        removedRow = false;
 
-        highestTile = 0;
-
-        rowsToRemove = new Array<>();
-        remove = false;
-        removeX = 0;
-        removeSpeedSeconds = .01f;
-        removedRow = false;
-
-        gameLogic = new GameLogic(gameBoard, game);
-        inputHandler = new InputHandler(gameLogic);
+        gameLogic = new GameLogic(gameBoard, this.game);
+        inputHandler = new InputHandler(this.gameLogic);
+        renderer = new Renderer(this.game, gameLogic);
     }
 
     @Override
@@ -244,111 +246,111 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         float dt = Gdx.graphics.getDeltaTime();
-        moveTimerSeconds += dt;
-        moveDownTimerSeconds += dt;
-        animationTimer += dt;
-        removeTimerSeconds += dt;
         inputHandler.handleInput();
         gameLogic.update(dt);
-        logic();
-        draw();
+        renderer.draw();
+//        logic();
     }
 
     // PARTIALLY MOVED, NOT DONE
     public void draw() {
-        ScreenUtils.clear(Color.BLACK);
-        game.viewport.apply();
-        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
-        game.batch.begin();
-
-        float worldWidth = game.viewport.getWorldWidth();
-        float worldHeight = game.viewport.getWorldHeight();
-
-        game.batch.draw(background, 0, 0, worldWidth, worldHeight);
+//        ScreenUtils.clear(Color.BLACK);
+//        game.viewport.apply();
+//        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
+//        game.batch.begin();
+//
+//        float worldWidth = game.viewport.getWorldWidth();
+//        float worldHeight = game.viewport.getWorldHeight();
+//
+//        game.batch.draw(background, 0, 0, worldWidth, worldHeight);
 
 
         /* TODO: Change this to pure visual with no logic
                  Will collect the coordinates from logic
                  and use them to draw the tiles
         */
-        // Creates a new piece at the top if there is no current piece falling
-        if (!currentPieceIsFalling) {
-            // If a piece was just held, the held piece is set as the falling piece and the falling piece is set as the held piece
-            if (holdingPiece && !firstHeldPiece) {
-                int tmp = currentPieceID;
-                currentPieceID = heldPieceID;
-                heldPieceID = tmp;
-            }
+//        // Creates a new piece at the top if there is no current piece falling
+//        if (!currentPieceIsFalling) {
+//            // If a piece was just held, the held piece is set as the falling piece and the falling piece is set as the held piece
+//            if (holdingPiece && !firstHeldPiece) {
+//                int tmp = currentPieceID;
+//                currentPieceID = heldPieceID;
+//                heldPieceID = tmp;
+//            }
+//
+//            // If it is the first held piece, the held piece is set as the current piece, the current piece is set as the next piece
+//            // Creates a random next piece and sets firstHeldPiece as false so it knows that there is a held piece
+//            else if (holdingPiece) {
+//                heldPieceID = currentPieceID;
+//                currentPieceID = nextPieceID;
+//                nextPieceID = (int) (Math.random() * 6);
+//                firstHeldPiece = false;
+//            }
+//
+//            // Sets the current piece as next piece and creates a random next piece
+//            else {
+//                currentPieceID = nextPieceID;
+//                nextPieceID = (int) (Math.random() * 6);
+//            }
+//
+//            currentPieceRotation = 0;   // Resets the rotation to default
+//            moveDownTimerSeconds = 0;   // Sets the move down timer to 0
+//
+//            // Sets the start and stop coordinates for the new piece, creates and draws it and initates that the piece is falling
+//            setStartAndStopCoordsCurrentPiece(currentPieceID);
+//            createNewPiece(currentPieceID, currentPieceRotation);
+//            currentPieceIsFalling = true;
+//
+//
+//            // Sets the start and stop coordinates for the next piece and creates and draws it
+//            setStartAndStopCoordsNextPiece(nextPieceID);
+//            createNextPiece(nextPieceID);
+//
+//            // Sets the start and stop coordinates for the ghost piece and creates and draws it
+//            createGhostPiece(currentPieceID);
+//        }
+//
+//        // If there already is a piece falling, draws the current pieces
+//        else {
+//            // Draws the piece currently falling
+//            for (Sprite sprite : fallingPieceTiles) {
+//                sprite.draw(game.batch);
+//            }
+//
+//            // Draws the next piece to fall
+//            for (Sprite nextSprite : nextPieceIDSprites) {
+//                nextSprite.draw(game.batch);
+//            }
+//
+//            // Draws the held piece if there is a held piece
+//            if (heldPieceTiles[0] != null) {
+//                for (Sprite heldSprite : heldPieceTiles) {
+//                    heldSprite.draw(game.batch);
+//                }
+//            }
+//
+//            // Draws the ghost tile
+//            for (Sprite ghostTile : ghostPieceTiles) {
+//                ghostTile.draw(game.batch);
+//            }
+//        }
+//
+//        // Draws the landed tiles
+//        for (Sprite tile : landedTilesTiles) {
+//            tile.draw(game.batch);
+//        }
+//
+//        // Draws the score
+//        for (Sprite scoreDigit : scoreDigits) {
+//            scoreDigit.draw(game.batch);
+//        }
 
-            // If it is the first held piece, the held piece is set as the current piece, the current piece is set as the next piece
-            // Creates a random next piece and sets firstHeldPiece as false so it knows that there is a held piece
-            else if (holdingPiece) {
-                heldPieceID = currentPieceID;
-                currentPieceID = nextPieceID;
-                nextPieceID = (int) (Math.random() * 6);
-                firstHeldPiece = false;
-            }
-
-            // Sets the current piece as next piece and creates a random next piece
-            else {
-                currentPieceID = nextPieceID;
-                nextPieceID = (int) (Math.random() * 6);
-            }
-
-            currentPieceRotation = 0;   // Resets the rotation to default
-            moveDownTimerSeconds = 0;   // Sets the move down timer to 0
-
-            // Sets the start and stop coordinates for the new piece, creates and draws it and initates that the piece is falling
-            setStartAndStopCoordsCurrentPiece(currentPieceID);
-            createNewPiece(currentPieceID, currentPieceRotation);
-            currentPieceIsFalling = true;
 
 
-            // Sets the start and stop coordinates for the next piece and creates and draws it
-            setStartAndStopCoordsNextPiece(nextPieceID);
-            createNextPiece(nextPieceID);
-
-            // Sets the start and stop coordinates for the ghost piece and creates and draws it
-            createGhostPiece(currentPieceID);
-        }
-
-        // If there already is a piece falling, draws the current pieces
-        else {
-            // Draws the piece currently falling
-            for (Sprite sprite : fallingPieceTiles) {
-                sprite.draw(game.batch);
-            }
-
-            // Draws the next piece to fall
-            for (Sprite nextSprite : nextPieceIDSprites) {
-                nextSprite.draw(game.batch);
-            }
-
-            // Draws the held piece if there is a held piece
-            if (heldPieceTiles[0] != null) {
-                for (Sprite heldSprite : heldPieceTiles) {
-                    heldSprite.draw(game.batch);
-                }
-            }
-
-            // Draws the ghost tile
-            for (Sprite ghostTile : ghostPieceTiles) {
-                ghostTile.draw(game.batch);
-            }
-        }
-
-        // Draws the landed tiles
-        for (Sprite tile : landedTilesTiles) {
-            tile.draw(game.batch);
-        }
-
-        // Draws the score
-        for (Sprite scoreDigit : scoreDigits) {
-            scoreDigit.draw(game.batch);
-        }
-
-        game.batch.end();
+//        game.batch.end();
     }
+
+
 
     // PARTIALLY MOVED, NOT DONE
     private void input() {
@@ -1084,7 +1086,7 @@ public class GameScreen implements Screen {
         return lowestTileY;
     }
 
-    // MOVED, NOT DONE
+    // DONE
     // Should return distance to bottom
     private void findDistanceToBottom(int lowestFallingTileY) {
         int distance = 0;

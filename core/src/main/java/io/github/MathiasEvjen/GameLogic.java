@@ -1,102 +1,16 @@
 package io.github.MathiasEvjen;
 
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.utils.Array;
-import io.github.MathiasEvjen.pieces.ZPiece;
+
 
 import java.awt.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GameLogic {
     final Main game;
 
-    private class PointF{
-        public float x;
-        public float y;
-
-        public PointF(float x, float y) {
-            this.x = x;
-            this.y = y;
-        }
-
-        public void translateX(float x) {
-            this.x += x;
-        }
-
-        public void translateY(float y) {
-            this.y += y;
-        }
-    }
-
-    private class Piece{
-        int pieceId;
-        int rotation;
-        Point pivotCoords = new Point();
-
-        PointF[] tileCoords = new PointF[4];
-
-        public Piece(int pieceId) {
-            this.pieceId = pieceId;
-        }
-
-        public Piece(int pieceId, int rotation) {
-            this.pieceId = pieceId;
-            this.rotation = rotation;
-        }
-
-        public void addTile(float x, float y, int tile) {
-            tileCoords[tile] = new PointF(x, y);
-        }
-
-        public void setPivotCoords(int x, int y) {
-            pivotCoords.x = x;
-            pivotCoords.y = y;
-        }
-
-        public void upDatePivotCoords(int x, int y) {
-            pivotCoords.x += x;
-            pivotCoords.y += y;
-        }
-
-        public void translatePivotX(int x) {
-            pivotCoords.x += x;
-        }
-
-        public void translatePivotY(int y) {
-            pivotCoords.y += y;
-        }
-
-        public float getX(int tile) {
-            return tileCoords[tile].x;
-        }
-
-        public float getY(int tile) {
-            return tileCoords[tile].y;
-        }
-
-        public void updateTile(float x, float y, int tile) {
-            tileCoords[tile].x = x;
-            tileCoords[tile].y = y;
-        }
-
-        public PointF getTile(int tile) {
-            return tileCoords[tile];
-        }
-
-        public void translateX(float x, int tile) {
-            tileCoords[tile].translateX(x);
-        }
-
-        public void translateY(float y, int tile) {
-            tileCoords[tile].translateY(y);
-        }
-
-        public int length() {
-            return tileCoords.length;
-        }
-    }
-
     private final char[][] gameBoard;
-
 
     private record CreatePieceBoundaries(int startX, int startY, int stopX, int stopY) {}
 
@@ -138,12 +52,17 @@ public class GameLogic {
     private final int MOVE_PIECE_RIGHT = 1;
     private final int NO_MOVEMENT = 0;
 
+    private enum Axis {
+        X_AXIS,
+        Y_AXIS
+    }
+
 
     private Piece fallingPiece;
     private Piece nextPiece;
     private Piece heldPiece;
     private Piece ghostPiece;
-    private Array<PointF> landedTiles;
+    private Map<PointF, Integer> landedTiles;
 
     // Boundary coords for creating new game pieces
     private int startY;
@@ -211,7 +130,7 @@ public class GameLogic {
         tileToRemove = 0;
         removeSpeedSeconds = .01f;
 
-        landedTiles = new Array<>();
+        landedTiles = new HashMap<>();
     }
 
 
@@ -223,16 +142,6 @@ public class GameLogic {
     /* ------------------------------ */
 
     public void update(float dt) {
-        updateTimers(dt);
-        updateGhostPiece();
-        updateFallingPiece(dt);
-
-        if (shouldRemove) {
-            processRowRemoval();
-            return;
-        }
-        findFullRows();  // Checks for filled rows and removes them
-
         if (!currentPieceIsFalling) {
             setCurrentPiece();
 
@@ -251,6 +160,16 @@ public class GameLogic {
             // Sets the start and stop coordinates for the ghost piece and creates and draws it
             ghostPiece = createGhostPiece(currentPieceID);
         }
+
+        updateTimers(dt);
+        updateGhostPiece();
+        updateFallingPiece(dt);
+
+        if (shouldRemove) {
+            processRowRemoval();
+            return;
+        }
+        findFullRows();  // Checks for filled rows and removes them
     }
 
     private void updateTimers(float dt) {
@@ -277,9 +196,25 @@ public class GameLogic {
         // If there is a piece falling it will move downwards every second
         if (!dropToBottom && !pieceLanded && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
             movePiece(NO_MOVEMENT, MOVE_PIECE_DOWN);
+            moveDownTimerSeconds = 0;
         }
 
         handleHighestTile();
+    }
+
+    private void updateGhostPiece() {
+        // Updates the location of ghost piece
+        // TODO: Come back to see if fallingPiece needs to be fallingPiece.tileCoords
+        if (fallingPiece != null && !dropToBottom) {
+            int lowestFallingTileY = findLowestFallingTileY();
+            int distanceToBottom = findDistanceToBottom(lowestFallingTileY);
+
+            // Updates X coordinates of the ghost piece to be the same as the falling piece
+            // Updates Y coordinates to be the height of the falling piece - its distance to the bottom
+            for (int tile = 0; tile < ghostPiece.length(); tile++) {
+                ghostPiece.updateTile(fallingPiece.getX(tile), fallingPiece.getY(tile) - distanceToBottom, tile);
+            }
+        }
     }
 
 
@@ -312,14 +247,17 @@ public class GameLogic {
         currentPieceID = heldPieceID;
         currentPieceType = PieceType.fromId(currentPieceID);
         heldPieceID = tmp;
+
+        setStartAndStopCoordsHeldPiece(PieceType.fromId(heldPieceID));
+        heldPiece = createSpecificPiece(heldPieceID);
     }
 
     private void setHeldPiece() {
         heldPieceID = currentPieceID;
+        setStartAndStopCoordsHeldPiece(PieceType.fromId(heldPieceID));
 
         currentPieceID = nextPieceID;
         currentPieceType = PieceType.fromId(currentPieceID);
-
         nextPieceID = (int) (Math.random() * TOTAL_PIECES);
 
         firstHeldPiece = false;
@@ -370,7 +308,7 @@ public class GameLogic {
         Piece createdGhostPiece = new Piece(currentPieceID);
 
         for (int tile = 0; tile < fallingPiece.length(); tile++) {
-            ghostPiece.addTile(fallingPiece.getX(tile), fallingPiece.getY(tile) - distanceToBottom, tile);
+            createdGhostPiece.addTile(fallingPiece.getX(tile), fallingPiece.getY(tile) - distanceToBottom, tile);
         }
         return createdGhostPiece;
     }
@@ -478,6 +416,7 @@ public class GameLogic {
         }
     }
 
+    // TODO: Figure out why held piece is not drawn after piece is placed
     public void handleHoldPieceInput() {
         if (holdingPiece) return;
         setStartAndStopCoordsHeldPiece(PieceType.fromId(currentPieceID));
@@ -505,6 +444,7 @@ public class GameLogic {
             moveTimerSeconds = 0;
         }
         moveDownTimerSeconds = 0;
+
     }
 
     public void handleMovePieceLeft() {
@@ -513,6 +453,7 @@ public class GameLogic {
         if (moveTimerSeconds > moveSpeedSeconds) {
             if (checkIfPieceAtEdge(true, LEFT_EDGE, 1, -1, 0)) return;
             movePiece(MOVE_PIECE_LEFT, NO_MOVEMENT);
+            moveTimerSeconds = 0;
         }
     }
 
@@ -522,6 +463,7 @@ public class GameLogic {
         if (moveTimerSeconds > moveSpeedSeconds) {
             if (checkIfPieceAtEdge(true, RIGHT_EDGE, 1, 1, 0)) return;
             movePiece(MOVE_PIECE_RIGHT, NO_MOVEMENT);
+            moveTimerSeconds = 0;
         }
     }
 
@@ -561,41 +503,26 @@ public class GameLogic {
         }
     }
 
-    public void movePiece(int xDist, int yDist) {
+    public void movePiece( int xDist, int yDist) {
         for (int tile = fallingPiece.length()-1; tile >= 0; tile--) {   // Must be a reverse loop!!
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'O';
-            fallingPiece.updateTile(xDist, yDist, tile);
+            fallingPiece.translateTile(xDist, yDist, tile);
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'F';
         }
         fallingPiece.upDatePivotCoords(xDist, yDist);
-        moveDownTimerSeconds = 0;
+
     }
 
     private void landCurrentFallingPiece() {
         // Iterates through all the tiles of the landing piece
         for (int tile = 0; tile < fallingPiece.length(); tile++) {
-            landedTiles.add(fallingPiece.getTile(tile));   // Adds the tile to the array holding the landed tiles
+            landedTiles.put(ghostPiece.getTile(tile), currentPieceID);  // Adds the tile to the array holding the landed tiles
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'X'; // Sets the coordinates of the landed tiles as filled
             currentPieceIsFalling = false; // Piece falling is set to false and a new piece will be created
             pieceLanded = false;    // Sets falling piece as not landed so the new piece can fall
             currentPieceRotation = 0;
         }
         holdingPiece = false;
-    }
-
-    private void updateGhostPiece() {
-        // Updates the location of ghost piece
-        // TODO: Come back to see if fallingPiece needs to be fallingPiece.tileCoords
-        if (fallingPiece != null && !dropToBottom) {
-            int lowestFallingTileY = findLowestFallingTileY();  // Finds the Y coordinate of the lowest tile of the falling piece
-            int distanceToBottom = findDistanceToBottom(lowestFallingTileY);   // Calculates the distance to the bottom of the lowest tile
-
-            // Updates X coordinates of the ghost piece to be the same as the falling piece
-            // Updates Y coordinates to be the height of the falling piece - its distance to the bottom
-            for (int tile = 0; tile < ghostPiece.length(); tile++) {
-                ghostPiece.updateTile(fallingPiece.getX(tile), fallingPiece.getY(tile) - distanceToBottom, tile);
-            }
-        }
     }
 
     private void moveLandedFloatingRowsDown() {
@@ -608,7 +535,7 @@ public class GameLogic {
     }
 
     private void moveLandedTileVertically(int y) {
-        for (PointF landedTile : landedTiles) {
+        for (PointF landedTile : landedTiles.keySet()) {
             if (landedTile.y-FLOOR == y) {
                 gameBoard[(int)landedTile.y][(int)landedTile.x-LEFT_EDGE] = 'O';
                 landedTile.translateY(-1);
@@ -622,12 +549,14 @@ public class GameLogic {
 
         for (int y = lowestFallingTileY; y >= 0; y--) {
             for (PointF tileCoord : fallingPiece.tileCoords) {
-                if (gameBoard[(int)tileCoord.y-FLOOR-distance][(int)tileCoord.x-LEFT_EDGE] == 'X') {
+                if ( gameBoard[(int)tileCoord.y-FLOOR-distance][(int)tileCoord.x-LEFT_EDGE] == 'X') {
                     distance--;
                     pieceLanded = true;
                     break;
                 }
             }
+
+            // TODO: This might be necessary
             if (y == FLOOR) {
                 pieceLanded = true;
                 break;
@@ -660,16 +589,17 @@ public class GameLogic {
         }
     }
 
+
+    // TODO: Update newRotationCoords to PointF
     private void updateFallingPieceCoords(int[] newRotationCoords) {
         for (int tile = 0, newRotationCounter = 0; tile < fallingPiece.length(); tile++, newRotationCounter += 2) {
-            for (int fallingTile = 0; fallingTile < fallingPiece.length(); tile++) {
+            for (int fallingTile = 0; fallingTile < fallingPiece.length(); fallingTile++) {
                 if (fallingPiece.getX(fallingTile) == newRotationCoords[newRotationCounter] && fallingPiece.getY(fallingTile) == newRotationCoords[newRotationCounter + 1]) {
                     gameBoard[(int)fallingPiece.getY(fallingTile)-FLOOR][(int)fallingPiece.getX(fallingTile)-LEFT_EDGE] = 'F';
                 } else {
                     gameBoard[(int)fallingPiece.getY(fallingTile)-FLOOR][(int)fallingPiece.getX(fallingTile)-LEFT_EDGE] = 'O';    // Sets the old position on the gameBoard as O
                 }
             }
-
 
             // Set the current tile to new coordinates
             fallingPiece.updateTile(newRotationCoords[newRotationCounter], newRotationCoords[newRotationCounter + 1], tile);
@@ -940,6 +870,8 @@ public class GameLogic {
     /*                                    */
     /* ---------------------------------- */
 
+    // TODO: Ikke-fungerende akkurat nå
+
     // Row removal and board management
     private boolean removeRows() {
         if (tileToRemove > 9) { // 9 Is the board edge
@@ -962,10 +894,10 @@ public class GameLogic {
     }
 
     private void removeTiles(int row) {
-        for (PointF landedTile : landedTiles) {
+        for (PointF landedTile : landedTiles.keySet()) {
             // When a landed tile on that position is found it is deleted
             if (landedTile.y-FLOOR == row && landedTile.x-LEFT_EDGE == tileToRemove) {
-                landedTiles.removeIndex(landedTiles.indexOf(landedTile, true)); // VIKTIG: Kan være grunnen til feilmedlding. Om nødvendig prøv false
+                landedTiles.remove(landedTile);
                 // Sets the tile slot on the gameBoard to O
                 gameBoard[row][tileToRemove] = 'O';
             }
@@ -1019,7 +951,7 @@ public class GameLogic {
 
     private void handleHighestTile() {
         // Loops over all landed tiles and checks if one of them is at ceiling height
-        for (PointF landedTile : landedTiles) {
+        for (PointF landedTile : landedTiles.keySet()) {
             if (landedTile.y == CEILING) {
 
                 // TODO: Come back to this after the refactoring
@@ -1063,5 +995,29 @@ public class GameLogic {
 
     public Piece getGhostPiece() {
         return ghostPiece;
+    }
+
+    public int getCurrentPieceID() {
+        return currentPieceID;
+    }
+
+    public int getNextPieceID() {
+        return nextPieceID;
+    }
+
+    public int getHeldPieceID() {
+        return heldPieceID;
+    }
+
+    public boolean getIsHoldingPiece() {
+        return holdingPiece;
+    }
+
+    public boolean isCurrentPieceIsFalling() {
+        return currentPieceIsFalling;
+    }
+
+    public Map<PointF, Integer> getLandedTiles() {
+        return landedTiles;
     }
 }
