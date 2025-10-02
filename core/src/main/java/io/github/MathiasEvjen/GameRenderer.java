@@ -165,4 +165,24 @@ public class GameRenderer {
             tile.draw(game.batch);
         }
     }
+
+    public void dispose() {
+        iPieceTex.dispose();
+        zPieceTex.dispose();
+        sPieceTex.dispose();
+        lPieceTex.dispose();
+        jPieceTex.dispose();
+        squarePieceTex.dispose();
+        tPieceTex.dispose();
+
+        background.dispose();
+
+        iPieceGhostTex.dispose();
+        zPieceGhostTex.dispose();
+        sPieceGhostTex.dispose();
+        lPieceGhostTex.dispose();
+        jPieceGhostTex.dispose();
+        squarePieceGhostTex.dispose();
+        tPieceGhostTex.dispose();
+    }
 }
