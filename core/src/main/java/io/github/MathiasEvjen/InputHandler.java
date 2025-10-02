@@ -11,12 +11,11 @@ public class InputHandler {
     }
 
     public void handleInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            gameLogic.dropFallingPiece();
-        }
-        if (Gdx.input.isKeyJustPressed((Input.Keys.UP))) {
-            gameLogic.rotateClockwise();
-        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) gameLogic.dropFallingPiece();
+        if (Gdx.input.isKeyJustPressed((Input.Keys.UP))) gameLogic.rotateClockwise();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)) gameLogic.handleHoldPieceInput();
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) gameLogic.handleMovePieceDownInput();
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) gameLogic.handleMovePieceLeft();
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) gameLogic.handleMovePieceRight();
     }
-
 }

@@ -52,6 +52,11 @@ public class GameLogic {
             pivotCoords.y = y;
         }
 
+        public void upDatePivotCoords(int x, int y) {
+            pivotCoords.x += x;
+            pivotCoords.y += y;
+        }
+
         public void translatePivotX(int x) {
             pivotCoords.x += x;
         }
@@ -126,6 +131,12 @@ public class GameLogic {
     private final int[] CHECK_FLOOR_BOUNDS = {2, 3, 3, 2};
     private final int[] Z_S_ROTATION_ORDER = {3, 1, 0, 2};
     private final int[] L_J_T_ROTATION_ORDER = {1, 3, 2, 0};
+
+    private final int MOVE_PIECE_UP = 1;
+    private final int MOVE_PIECE_DOWN = -1;
+    private final int MOVE_PIECE_LEFT = -1;
+    private final int MOVE_PIECE_RIGHT = 1;
+    private final int NO_MOVEMENT = 0;
 
 
     private Piece fallingPiece;
@@ -265,7 +276,7 @@ public class GameLogic {
 
         // If there is a piece falling it will move downwards every second
         if (!dropToBottom && !pieceLanded && currentPieceIsFalling && moveDownTimerSeconds > moveDownSpeedSeconds) {
-            movePieceVertically(-1);
+            movePiece(NO_MOVEMENT, MOVE_PIECE_DOWN);
         }
 
         handleHighestTile();
@@ -282,7 +293,7 @@ public class GameLogic {
     private void setCurrentPiece() {
         if (holdingPiece) {
             if (firstHeldPiece) {
-                holdPiece();
+                setHeldPiece();
             } else {
                 swapHeldPiece();
             }
@@ -303,7 +314,7 @@ public class GameLogic {
         heldPieceID = tmp;
     }
 
-    private void holdPiece() {
+    private void setHeldPiece() {
         heldPieceID = currentPieceID;
 
         currentPieceID = nextPieceID;
@@ -414,6 +425,30 @@ public class GameLogic {
         stopY = pieceBoundaries.stopY();
     }
 
+    public void setStartAndStopCoordsHeldPiece(PieceType setPieceType) {
+        switch (setPieceType) {
+            case I_PIECE:
+                startX = 0;
+                stopX = 5;
+                startY = CEILING - 1;
+                stopY = CEILING - 6;
+                break;
+            case S_PIECE:
+            case Z_PIECE:
+                startX = 1;
+                stopX = 6;
+                startY = CEILING;
+                stopY = CEILING - 5;
+                break;
+            default:
+                startX = 0;
+                stopX = 5;
+                startY = CEILING - 1;
+                stopY = CEILING - 5;
+                break;
+        }
+    }
+
 
 
     /* ------------------------------ */
@@ -430,12 +465,9 @@ public class GameLogic {
         if (currentPieceIsFalling) {
             if (pieceLanded) moveDownTimerSeconds = 0;
 
-            // Checks if the current piece is at an edge and needs to be moved out to rotate
-            handlePiecesAtEdge();
+            handlePieceAtEdge();
 
-            // Updates the currently falling piece's rotation
-            if (currentPieceRotation == 3) currentPieceRotation = 0;
-            else currentPieceRotation++;
+            updatePieceRotation();
 
             // Creates an array of the coordinates of the next rotation of the currently falling piece
             int[] newRotationCoords = createRotatedCoords();
@@ -443,6 +475,53 @@ public class GameLogic {
 
             // Goes through the tiles of the falling piece and the newRotation coordinates and updates the tiles of the falling piece to the new coordinates
             updateFallingPieceCoords(newRotationCoords);
+        }
+    }
+
+    public void handleHoldPieceInput() {
+        if (holdingPiece) return;
+        setStartAndStopCoordsHeldPiece(PieceType.fromId(currentPieceID));
+
+        heldPiece =  createSpecificPiece(currentPieceID);
+
+        currentPieceIsFalling = false;
+        holdingPiece = true;
+    }
+
+    public void handleMovePieceDownInput() {
+        if (dropToBottom) return;
+
+        pieceLanded = false;
+
+        checkIfPieceLanded();
+
+        if (pieceLanded) {
+            currentPieceIsFalling = false;
+            landCurrentFallingPiece();
+        }
+
+        if (moveTimerSeconds > moveSpeedSeconds) {
+            movePiece(NO_MOVEMENT, MOVE_PIECE_DOWN);
+            moveTimerSeconds = 0;
+        }
+        moveDownTimerSeconds = 0;
+    }
+
+    public void handleMovePieceLeft() {
+        if (dropToBottom) return;
+
+        if (moveTimerSeconds > moveSpeedSeconds) {
+            if (checkIfPieceAtEdge(true, LEFT_EDGE, 1, -1, 0)) return;
+            movePiece(MOVE_PIECE_LEFT, NO_MOVEMENT);
+        }
+    }
+
+    public void handleMovePieceRight() {
+        if (dropToBottom) return;
+
+        if (moveTimerSeconds > moveSpeedSeconds) {
+            if (checkIfPieceAtEdge(true, RIGHT_EDGE, 1, 1, 0)) return;
+            movePiece(MOVE_PIECE_RIGHT, NO_MOVEMENT);
         }
     }
 
@@ -482,13 +561,13 @@ public class GameLogic {
         }
     }
 
-    private void movePieceVertically(int distance) {
+    public void movePiece(int xDist, int yDist) {
         for (int tile = fallingPiece.length()-1; tile >= 0; tile--) {   // Must be a reverse loop!!
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'O';
-            fallingPiece.translateY(distance, tile);
-            fallingPiece.translatePivotY(distance);
+            fallingPiece.updateTile(xDist, yDist, tile);
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'F';
         }
+        fallingPiece.upDatePivotCoords(xDist, yDist);
         moveDownTimerSeconds = 0;
     }
 
@@ -528,7 +607,7 @@ public class GameLogic {
         }
     }
 
-    public void moveLandedTileVertically(int y) {
+    private void moveLandedTileVertically(int y) {
         for (PointF landedTile : landedTiles) {
             if (landedTile.y-FLOOR == y) {
                 gameBoard[(int)landedTile.y][(int)landedTile.x-LEFT_EDGE] = 'O';
@@ -538,7 +617,7 @@ public class GameLogic {
         }
     }
 
-    public int findDistanceToBottom(int lowestFallingTileY) {
+    private int findDistanceToBottom(int lowestFallingTileY) {
         int distance = 0;
 
         for (int y = lowestFallingTileY; y >= 0; y--) {
@@ -574,13 +653,10 @@ public class GameLogic {
     private void checkIfPieceAtBottom() {
         pieceLanded = false;
 
-        // Checks the tiles to see if the tile directly under it is either filled or the bottom of the gameBoard
-        // Sets the piece as landed if either criteria is met
         checkIfPieceLanded();
 
-        // If the piece cannot move down it will be stored in the landedTilesSprites array
         if (pieceLanded && moveDownTimerSeconds > landTimeSeconds) {
-            landCurrentFallingPiece();    // Lands the current tile
+            landCurrentFallingPiece();
         }
     }
 
@@ -600,6 +676,11 @@ public class GameLogic {
 
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'F';  // Sets the new positions on the gameBoard as falling
         }
+    }
+
+    private void updatePieceRotation() {
+        if (currentPieceRotation == 3) currentPieceRotation = 0;
+        else currentPieceRotation++;
     }
 
     private int[] createRotatedCoords() {
@@ -632,13 +713,14 @@ public class GameLogic {
 
 
 
+
     /* ------------------------------ */
     /*                                */
     /*  Collision and edge detection  */
     /*                                */
     /* ------------------------------ */
 
-    private void handlePiecesAtEdge() {
+    private void handlePieceAtEdge() {
         switch (currentPieceType) {
             case I_PIECE:
                 handleIPieceAtEdge();

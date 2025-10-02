@@ -25,6 +25,7 @@ import java.util.Arrays;
 public class GameScreen implements Screen {
     final Main game;
     final GameLogic gameLogic;
+    final InputHandler inputHandler;
 
     private final char[][] gameBoard;
     private record CreatePieceBoundaries(int startX, int startY, int stopX, int stopY) {}
@@ -232,6 +233,7 @@ public class GameScreen implements Screen {
         removedRow = false;
 
         gameLogic = new GameLogic(gameBoard, game);
+        inputHandler = new InputHandler(gameLogic);
     }
 
     @Override
@@ -246,7 +248,7 @@ public class GameScreen implements Screen {
         moveDownTimerSeconds += dt;
         animationTimer += dt;
         removeTimerSeconds += dt;
-        input();
+        inputHandler.handleInput();
         gameLogic.update(dt);
         logic();
         draw();
@@ -351,6 +353,7 @@ public class GameScreen implements Screen {
     // PARTIALLY MOVED, NOT DONE
     private void input() {
 
+        // DONE
         // Moves the piece directly to the bottom from the current position when the space key is pressed
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             // Find the lowest point in the piece
@@ -359,6 +362,7 @@ public class GameScreen implements Screen {
             score += distanceToBottom;
         }
 
+        // DONE
         // When the up key is pressed, the currently falling piece is rotated once clockwise
         if (currentPieceIsFalling && Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
             if (pieceLanded) moveDownTimerSeconds = 0;
@@ -378,12 +382,14 @@ public class GameScreen implements Screen {
             updateFallingPieceCoords(newRotationCoords);
         }
 
+        // DONE
         // Hold the currently falling piece if the falling piece hasn't already been held
         if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)) {
             if (holdingPiece) return;
             holdPiece(currentPieceID);
         }
 
+        // DONE
         // Moves piece down when the down key is pressed
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN) && !dropToBottom) {
             if (moveTimerSeconds > moveSpeedSeconds) {
@@ -394,6 +400,7 @@ public class GameScreen implements Screen {
             moveDownTimerSeconds = 0;
         }
 
+        // DONE
         // Moves piece left when the left key is pressed
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT) && !dropToBottom) {
             if (moveTimerSeconds > moveSpeedSeconds) {
@@ -402,6 +409,7 @@ public class GameScreen implements Screen {
             }
         }
 
+        // DONE
         // Moves piece right when the right key is pressed
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) && !dropToBottom) {
             if (moveTimerSeconds > moveSpeedSeconds) {
@@ -543,7 +551,7 @@ public class GameScreen implements Screen {
         }
     }
 
-    // NOT MOVED
+    // DONE
     public void holdPiece(int setPieceID) {
         switch (setPieceID) {
             case 0:
@@ -1102,7 +1110,7 @@ public class GameScreen implements Screen {
         distanceToBottom = distance;
     }
 
-    // NOT DONE
+    // DONE
     public void movePieceDown() {
         pieceLanded = false;
         int lowestTile = (int) fallingPieceTiles[0].getY();
@@ -1121,7 +1129,7 @@ public class GameScreen implements Screen {
         }
     }
 
-    // NOT DONE
+    // DONE
     public void movePieceLeft() {
         for (Sprite tile : fallingPieceTiles) {
             if (tile == null || tile.getX() == LEFT_EDGE || gameBoard[(int)tile.getY()-FLOOR][(int)tile.getX()-LEFT_EDGE - 1] == 'X') return;
@@ -1131,7 +1139,7 @@ public class GameScreen implements Screen {
         piecePivotCoords[0]--;
     }
 
-    // NOT DONE
+    // DONE
     public void movePieceRight() {
         for (Sprite tile : fallingPieceTiles) {
             // Checks if the tiles furthest right are at the right edge
@@ -1142,7 +1150,7 @@ public class GameScreen implements Screen {
         piecePivotCoords[0]++;
     }
 
-    // NOT DONE
+    // DONE
     // Moves the falling piece laterally
     // Takes in the distance to be moved
     public void movePieceLaterally(int distance) {
@@ -1163,7 +1171,7 @@ public class GameScreen implements Screen {
         }
     }
 
-    // NOT MOVED, NOT DONE
+    // DONE
     // Lands the current piece
     private void landPiece() {
         // Iterates through all the tiles of the landing piece
