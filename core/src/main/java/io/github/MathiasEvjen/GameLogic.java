@@ -93,6 +93,7 @@ public class GameLogic {
     private boolean pieceLanded;
     private boolean holdingPiece;
     private boolean firstHeldPiece;
+    private boolean shouldDrawHeldPiece;
 
     private int highestTile;
 
@@ -118,6 +119,8 @@ public class GameLogic {
         nextPieceID = (int) (Math.random() * TOTAL_PIECES); //Mat
         holdingPiece = false;
         firstHeldPiece = true;
+        shouldDrawHeldPiece = false;
+
 
         moveSpeedSeconds = .1175f;
         moveDownSpeedSeconds = 1f;   // Defines the dropspeed of the pieces
@@ -208,7 +211,6 @@ public class GameLogic {
 
     private void updateGhostPiece() {
         // Updates the location of ghost piece
-        // TODO: Come back to see if fallingPiece needs to be fallingPiece.tileCoords
         if (fallingPiece != null && !dropToBottom) {
             int lowestFallingTileY = findLowestFallingTileY();
             int distanceToBottom = findDistanceToBottom(lowestFallingTileY);
@@ -253,7 +255,6 @@ public class GameLogic {
         heldPieceID = tmp;
 
         setStartAndStopCoordsHeldPiece(PieceType.fromId(heldPieceID));
-        heldPiece = createSpecificPiece(heldPieceID);
     }
 
     private void setHeldPiece() {
@@ -409,7 +410,6 @@ public class GameLogic {
         }
     }
 
-    // TODO: Figure out why held piece is not drawn after piece is placed
     public void handleHoldPieceInput() {
         if (holdingPiece) return;
         setStartAndStopCoordsHeldPiece(PieceType.fromId(currentPieceID));
@@ -418,6 +418,7 @@ public class GameLogic {
 
         currentPieceIsFalling = false;
         holdingPiece = true;
+        shouldDrawHeldPiece = true;
     }
 
     public void handleMovePieceDownInput() {
@@ -549,7 +550,6 @@ public class GameLogic {
                 }
             }
 
-            // TODO: This might be necessary
             if (y == FLOOR) {
                 pieceLanded = true;
                 break;
@@ -659,18 +659,20 @@ public class GameLogic {
     private void handleIPieceAtEdge() {
 
         // If I-Piece is at a left wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
-        if (checkIfPieceAtEdge(true, LEFT_EDGE, 2,-1, 0)) {
-            shiftIPieceFromLeftWall();
-        }
+        if (checkIfPieceAtEdge(true, LEFT_EDGE, 2,-1, 0)) shiftIPieceFromLeftWall();
 
         // If I-Piece is at a right wall and there is free space, the piecePivotCoords coords are moved out from the wall so it can rotate
-        if (checkIfPieceAtEdge(true, RIGHT_EDGE, 2,1, 0)) {
-            shiftIPieceFromRightWall();
-        }
+        if (checkIfPieceAtEdge(true, RIGHT_EDGE, 2,1, 0)) shiftIPieceFromRightWall();
 
-        if (checkIfPieceAtEdge(false, FLOOR, 2,0, -1)) {
-            shiftIPieceFromFloor();
-        }
+        if (checkIfPieceAtEdge(false, CEILING, 2, 0, 1)) defaultShiftPieceFromEdge(
+            PiecePicker.getPiece(currentPieceID, 1),
+            CHECK_CEILING_BOUNDS[0],
+            CHECK_CEILING_BOUNDS[1],
+            CHECK_CEILING_BOUNDS[2],
+            CHECK_CEILING_BOUNDS[3],
+            0, -1);
+
+        if (checkIfPieceAtEdge(false, FLOOR, 2,0, -1)) shiftIPieceFromFloor();
     }
 
     private void shiftIPieceFromLeftWall() {
@@ -993,8 +995,8 @@ public class GameLogic {
         return heldPieceID;
     }
 
-    public boolean getIsHoldingPiece() {
-        return holdingPiece;
+    public boolean getShouldDrawHeldPiece() {
+        return shouldDrawHeldPiece;
     }
 
     public boolean isCurrentPieceIsFalling() {

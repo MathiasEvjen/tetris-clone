@@ -26,7 +26,7 @@ public class GameScreen implements Screen {
     final Main game;
     final GameLogic gameLogic;
     final InputHandler inputHandler;
-    final Renderer renderer;
+    final GameRenderer gameRenderer;
 
     private final char[][] gameBoard;
     private record CreatePieceBoundaries(int startX, int startY, int stopX, int stopY) {}
@@ -235,7 +235,7 @@ public class GameScreen implements Screen {
 
         gameLogic = new GameLogic(gameBoard, this.game);
         inputHandler = new InputHandler(this.gameLogic);
-        renderer = new Renderer(this.game, gameLogic);
+        gameRenderer = new GameRenderer(this.game, gameLogic);
     }
 
     @Override
@@ -248,7 +248,7 @@ public class GameScreen implements Screen {
         float dt = Gdx.graphics.getDeltaTime();
         inputHandler.handleInput();
         gameLogic.update(dt);
-        renderer.draw();
+        gameRenderer.draw();
 //        logic();
     }
 
@@ -583,7 +583,7 @@ public class GameScreen implements Screen {
         holdingPiece = true;
     }
 
-    // MOVED, NOT DONE
+    // DONE
     private void updateFallingPieceCoords(int[] newRotationCoords) {
         for (int tile = 0, newRotationCounter = 0; tile < fallingPieceTiles.length; tile++, newRotationCounter += 2) {
             for (Sprite fallingTile : fallingPieceTiles) {
@@ -603,7 +603,7 @@ public class GameScreen implements Screen {
         }
     }
 
-    // MOVED, NOT DONE
+    // DONE
     private int[] createRotatedCoords(int pieceID, int rotation) {
         int[][] piece = PiecePicker.getPiece(currentPieceID, currentPieceRotation);
 
