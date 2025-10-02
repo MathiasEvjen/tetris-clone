@@ -16,4 +16,12 @@ public class PointF {
     public void translateY(float y) {
         this.y += y;
     }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
 }

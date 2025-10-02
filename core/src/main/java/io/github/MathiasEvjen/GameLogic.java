@@ -19,13 +19,13 @@ public class GameLogic {
 
     private enum PieceType {
 
-        SQUARE_PIECE(0),
-        I_PIECE(1),
-        Z_PIECE(2),
-        S_PIECE(3),
-        L_PIECE(4),
-        J_PIECE(5),
-        T_PIECE(6);
+        I_PIECE(0),
+        Z_PIECE(1),
+        S_PIECE(2),
+        L_PIECE(3),
+        J_PIECE(4),
+        T_PIECE(5),
+        SQUARE_PIECE(6);
 
         private final int id;
 
@@ -152,12 +152,12 @@ public class GameLogic {
             moveDownTimerSeconds = 0;   // Sets the move down timer to 0
 
             // Sets the start and stop coordinates for the new piece, creates and draws it and initates that the piece is falling
-            setStartAndStopCoordsCurrentPiece(currentPieceID);
+            setStartAndStopCoords(currentPieceID, LEFT_EDGE);
             fallingPiece = createNewFallingPiece(currentPieceID, currentPieceRotation);
             currentPieceIsFalling = true;
 
             // Sets the start and stop coordinates for the next piece and creates and draws it
-            setStartAndStopCoordsNextPiece(nextPieceID);
+            setStartAndStopCoords(nextPieceID, RIGHT_EDGE);
             nextPiece = createSpecificPiece(nextPieceID);
 
             // Sets the start and stop coordinates for the ghost piece and creates and draws it
@@ -317,20 +317,18 @@ public class GameLogic {
         return createdGhostPiece;
     }
 
-    private CreatePieceBoundaries calculatePieceBoundaries(int currentPieceID, int edge) {
+    private CreatePieceBoundaries calculatePieceBoundaries(PieceType currentPieceType, int edge) {
         int startX, startY, stopX, stopY;
 
-        switch (currentPieceID) {
-            // Sets the start and stop coordinates for creating IPieces
-            case 0 -> {
+        switch (currentPieceType) {
+            case I_PIECE -> {
                 startX = edge + (edge == LEFT_EDGE ? 2 : 1);
-                startY = (edge == LEFT_EDGE ? CEILING : CEILING - 1);
+                startY = (edge == LEFT_EDGE ? CEILING + 1 : CEILING - 1);
                 stopX = edge + (edge == LEFT_EDGE ? 7 : 6);
-                stopY = (edge == LEFT_EDGE ? CEILING - 5 : CEILING - 6);
+                stopY = (edge == LEFT_EDGE ? CEILING - 4 : CEILING - 6);
             }
 
-            // Sets the start and stop coordinates for creating S and Z pieces
-            case 1, 2 -> {
+            case Z_PIECE, S_PIECE -> {
                 startX = edge + (edge == LEFT_EDGE ? 3 : 2);
                 startY = (edge == LEFT_EDGE ? CEILING + 2 : CEILING);
                 stopX = edge + (edge == LEFT_EDGE ? 8 : 7);
@@ -349,17 +347,8 @@ public class GameLogic {
         return new CreatePieceBoundaries(startX, startY, stopX, stopY);
     }
 
-    private void setStartAndStopCoordsCurrentPiece(int currentPieceID) {
-        CreatePieceBoundaries pieceBoundaries = calculatePieceBoundaries(currentPieceID, LEFT_EDGE);
-
-        startX = pieceBoundaries.startX();
-        startY = pieceBoundaries.startY();
-        stopX = pieceBoundaries.stopX();
-        stopY = pieceBoundaries.stopY();
-    }
-
-    private void setStartAndStopCoordsNextPiece(int nextPieceID) {
-        CreatePieceBoundaries pieceBoundaries = calculatePieceBoundaries(nextPieceID, RIGHT_EDGE);
+    private void setStartAndStopCoords(int pieceId, int edge) {
+        CreatePieceBoundaries pieceBoundaries = calculatePieceBoundaries(PieceType.fromId(pieceId), edge);
 
         startX = pieceBoundaries.startX();
         startY = pieceBoundaries.startY();
@@ -412,8 +401,8 @@ public class GameLogic {
             updatePieceRotation();
 
             // Creates an array of the coordinates of the next rotation of the currently falling piece
-            int[] newRotationCoords = createRotatedCoords();
-            if (newRotationCoords[0] == 99) return; // Aborts rotation if the first index of the coords is 99
+            PointF[] newRotationCoords = createRotatedCoords();
+            if (newRotationCoords[0] == null) return; // Aborts rotation if the first index of the coords is 99
 
             // Goes through the tiles of the falling piece and the newRotation coordinates and updates the tiles of the falling piece to the new coordinates
             updateFallingPieceCoords(newRotationCoords);
@@ -593,12 +582,10 @@ public class GameLogic {
         }
     }
 
-
-    // TODO: Update newRotationCoords to PointF
-    private void updateFallingPieceCoords(int[] newRotationCoords) {
-        for (int tile = 0, newRotationCounter = 0; tile < fallingPiece.length(); tile++, newRotationCounter += 2) {
+    private void updateFallingPieceCoords(PointF[] newRotationCoords) {
+        for (int tile = 0, newRotationCounter = 0; tile < fallingPiece.length(); tile++, newRotationCounter++) {
             for (int fallingTile = 0; fallingTile < fallingPiece.length(); fallingTile++) {
-                if (fallingPiece.getX(fallingTile) == newRotationCoords[newRotationCounter] && fallingPiece.getY(fallingTile) == newRotationCoords[newRotationCounter + 1]) {
+                if (fallingPiece.getX(fallingTile) == newRotationCoords[newRotationCounter].getX() && fallingPiece.getY(fallingTile) == newRotationCoords[newRotationCounter].getY()) {
                     gameBoard[(int)fallingPiece.getY(fallingTile)-FLOOR][(int)fallingPiece.getX(fallingTile)-LEFT_EDGE] = 'F';
                 } else {
                     gameBoard[(int)fallingPiece.getY(fallingTile)-FLOOR][(int)fallingPiece.getX(fallingTile)-LEFT_EDGE] = 'O';    // Sets the old position on the gameBoard as O
@@ -606,7 +593,7 @@ public class GameLogic {
             }
 
             // Set the current tile to new coordinates
-            fallingPiece.updateTile(newRotationCoords[newRotationCounter], newRotationCoords[newRotationCounter + 1], tile);
+            fallingPiece.updateTile(newRotationCoords[newRotationCounter].getX(), newRotationCoords[newRotationCounter].getY(), tile);
 
             gameBoard[(int)fallingPiece.getY(tile)-FLOOR][(int)fallingPiece.getX(tile)-LEFT_EDGE] = 'F';  // Sets the new positions on the gameBoard as falling
         }
@@ -617,11 +604,11 @@ public class GameLogic {
         else currentPieceRotation++;
     }
 
-    private int[] createRotatedCoords() {
+    private PointF[] createRotatedCoords() {
         int[][] piece = PiecePicker.getPiece(currentPieceID, currentPieceRotation);
 
-        int tile = 0;    // Counts the number of
-        int[] newRotationCoords = new int[8]; // Holds the coordinates from the next rotation
+//        int[] newRotationCoords = new int[8]; // Holds the coordinates from the next rotation
+        PointF[] newRotationCoords = new PointF[4];
         int newRotationCounter = 0;    // Counter for the index of newRotation
 
         for (int y1 = fallingPiece.pivotCoords.y + 2, y2 = 0; y1 > fallingPiece.pivotCoords.y - 3; y1--, y2++) {
@@ -630,21 +617,18 @@ public class GameLogic {
                     if (x1 < LEFT_EDGE || x1 > RIGHT_EDGE || y1 < FLOOR || y1 > CEILING || gameBoard[y1-FLOOR][x1-LEFT_EDGE] == 'X') {
                         if (currentPieceRotation == 0) currentPieceRotation = 3;
                         else currentPieceRotation--;
-                        newRotationCoords[0] = 99;  // Sets first index to 99 to signal abort
+                        newRotationCoords[0] = null;  // Sets first index to 99 to signal abort
                         return newRotationCoords;    // Checks if the new position is taken or out of bounds
                     }
 
                     // Saves the new coordinates to an array so that no pieces are moved preemptively
-                    newRotationCoords[newRotationCounter++] = x1;
-                    newRotationCoords[newRotationCounter++] = y1;
-                    tile++; // Increments the number of tiles counted
+                    newRotationCoords[newRotationCounter++] = new PointF(x1, y1);
                 }
             }
         }
 
         return newRotationCoords;
     }
-
 
 
 
