@@ -33,21 +33,11 @@ public class SPiece {
         }
     };
 
-    private int currentRotation = 0;
-
     public SPiece() {
 
     }
 
-    public int[][] getPiece() {
-        return rotations[currentRotation];
-    }
-
     public int[][] getRotation(int rotation) {
         return rotations[rotation];
-    }
-
-    public int getCurrentRotation() {
-        return this.currentRotation;
     }
 }

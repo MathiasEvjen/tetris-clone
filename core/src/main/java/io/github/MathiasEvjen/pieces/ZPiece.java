@@ -37,10 +37,6 @@ public class ZPiece {
 
     }
 
-    public int[][] getPiece() {
-        return rotations[0];
-    }
-
     public int[][] getRotation(int rotation) {
         return rotations[rotation];
     }

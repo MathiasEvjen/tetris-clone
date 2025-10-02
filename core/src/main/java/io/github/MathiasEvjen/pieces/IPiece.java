@@ -33,14 +33,8 @@ public class IPiece {
 
     };
 
-    private int currentRotation = 0;
-
     public IPiece() {
 
-    }
-
-    public int[][] getPiece() {
-        return rotations[currentRotation];
     }
 
     public int[][] getRotation(int rotation) {

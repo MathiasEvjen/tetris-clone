@@ -22,7 +22,7 @@ public class Main extends Game {
         font.setUseIntegerPositions(false);
         font.getData().setScale(viewport.getWorldWidth(), viewport.getWorldWidth());
 
-        this.setScreen(new GameBoard(this));
+        this.setScreen(new GameScreen(this));
     }
 
     public void render() {
