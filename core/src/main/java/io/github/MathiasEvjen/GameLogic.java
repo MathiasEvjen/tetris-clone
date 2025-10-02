@@ -5,12 +5,15 @@ import com.badlogic.gdx.utils.Array;
 
 import java.awt.*;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class GameLogic {
     final Main game;
 
     private final char[][] gameBoard;
+    private final int BOARD_WIDTH = 10;
+    private final int BOARD_HEIGHT = 20;
 
     private record CreatePieceBoundaries(int startX, int startY, int stopX, int stopY) {}
 
@@ -169,6 +172,7 @@ public class GameLogic {
             processRowRemoval();
             return;
         }
+
         findFullRows();  // Checks for filled rows and removes them
     }
 
@@ -537,7 +541,7 @@ public class GameLogic {
     private void moveLandedTileVertically(int y) {
         for (PointF landedTile : landedTiles.keySet()) {
             if (landedTile.y-FLOOR == y) {
-                gameBoard[(int)landedTile.y][(int)landedTile.x-LEFT_EDGE] = 'O';
+                gameBoard[(int)landedTile.y-FLOOR][(int)landedTile.x-LEFT_EDGE] = 'O';
                 landedTile.translateY(-1);
                 gameBoard[(int)landedTile.y-FLOOR][(int)landedTile.x-LEFT_EDGE] = 'X';
             }
@@ -870,46 +874,11 @@ public class GameLogic {
     /*                                    */
     /* ---------------------------------- */
 
-    // TODO: Ikke-fungerende akkurat nå
-
-    // Row removal and board management
-    private boolean removeRows() {
-        if (tileToRemove > 9) { // 9 Is the board edge
-            tileToRemove = 0;
-            shouldRemove = false;
-            return true;
-        }
-
-        if (removeTimerSeconds > removeSpeedSeconds) {
-            // Loops through all the landed tiles on the gameBoard
-            for (int row : rowsToRemove) {
-                removeTiles(row);
-            }
-
-            removeTimerSeconds = 0;
-            if (tileToRemove <= 9) tileToRemove++;
-        }
-
-        return false;
-    }
-
-    private void removeTiles(int row) {
-        for (PointF landedTile : landedTiles.keySet()) {
-            // When a landed tile on that position is found it is deleted
-            if (landedTile.y-FLOOR == row && landedTile.x-LEFT_EDGE == tileToRemove) {
-                landedTiles.remove(landedTile);
-                // Sets the tile slot on the gameBoard to O
-                gameBoard[row][tileToRemove] = 'O';
-            }
-        }
-    }
-
     private void findFullRows() {
         rowsToRemove.clear();
 
         // Goes through all the rows of the gameBoard
-        for (int y = 0; y < gameBoard.length; y++) {
-            // If all the tiles are the row is flagged to be removed
+        for (int y = 0; y < BOARD_HEIGHT; y++) {
             if (isRowFull(y)) {
                 rowsToRemove.add(y);
             }
@@ -924,7 +893,7 @@ public class GameLogic {
     private boolean isRowFull(int y) {
         boolean filledRow = true;
         // Checks all the tiles in the row if they are full
-        for (int x = 0; x < gameBoard[y].length; x++) {
+        for (int x = 0; x < BOARD_WIDTH; x++) {
             if (gameBoard[y][x] != 'X') {
                 filledRow = false;
                 break;
@@ -936,9 +905,39 @@ public class GameLogic {
     private void processRowRemoval() {
         boolean rowsRemoved = removeRows();
 
-        // If a row was removed, the rest of the gameBoard is moved down to fill the empty space
+
         if (rowsRemoved) {
             moveLandedFloatingRowsDown();
+        }
+    }
+
+    private boolean removeRows() {
+        if (tileToRemove > BOARD_WIDTH-1) {
+            tileToRemove = 0;
+            shouldRemove = false;
+            return true;
+        }
+
+        if (removeTimerSeconds > removeSpeedSeconds) {
+            // Loops through all the landed tiles on the gameBoard
+            for (int row : rowsToRemove) {
+                removeTiles(row);
+            }
+
+            removeTimerSeconds = 0;
+            if (tileToRemove <= 9) tileToRemove++;
+        }
+        return false;
+    }
+
+    private void removeTiles(int row) {
+        Iterator<PointF> it = landedTiles.keySet().iterator();
+        while (it.hasNext()) {
+            PointF landedTile = it.next();
+            if (landedTile.y - FLOOR == row && landedTile.x - LEFT_EDGE == tileToRemove) {
+                it.remove(); // Safe remove
+                gameBoard[row][tileToRemove] = 'O';
+            }
         }
     }
 
@@ -973,6 +972,7 @@ public class GameLogic {
         }
         return lowestTileY;
     }
+
 
 
     /* ------------------------------ */
